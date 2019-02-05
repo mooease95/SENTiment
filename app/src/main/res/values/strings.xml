@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Thorac</string>
+    <string name="thorac">THORAC</string>
+    <string name="sign_in">Sign In</string>
+    <string name="register">Register</string>
+</resources>
