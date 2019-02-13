@@ -13,11 +13,19 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class EmailAuth extends MainActivity implements View.OnClickListener {
 
@@ -27,6 +35,8 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
     private EditText mPasswordField;
 
     private FirebaseAuth mAuth;
+
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +50,8 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
         findViewById(R.id.register).setOnClickListener(this);
 
         mAuth = FirebaseAuth.getInstance();
+
+        db = FirebaseFirestore.getInstance();
     }
 
     @Override
@@ -63,6 +75,7 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "createUserWithEmail:success");
                             FirebaseUser user = mAuth.getCurrentUser();
+                            addToCloud(email);
                             updateUI(user);
                         } else {
                             // If sign in fails, display a message to the user.
@@ -77,6 +90,21 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
                         // [END_EXCLUDE]
                     }
                 });
+    }
+
+    private void addToCloud(String email) {
+        Map<String, Object> user = new HashMap<>();
+        user.put("Email", email);
+        user.put("RepresentationPreference", "");
+
+        db.collection("users").add(user)
+                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Timber.d("%sDocument ", TAG);
+                    }
+                });
+
     }
 
     private void signIn(String email, String password) {
@@ -94,12 +122,12 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in user's information
-                            Log.d(TAG, "signInWithEmail:success");
+                            Timber.d("signInWithEmail:success");
                             FirebaseUser user = mAuth.getCurrentUser();
                             updateUI(user);
                         } else {
                             // If sign in fails, display a message to the user.
-                            Log.w(TAG, "signInWithEmail:failure", task.getException());
+                            Timber.tag(TAG).w(task.getException(), "signInWithEmail:failure");
                             Toast.makeText(EmailAuth.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
                             updateUI(null);
