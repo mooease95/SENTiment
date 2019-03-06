@@ -19,6 +19,8 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -74,7 +76,10 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
                     DocumentSnapshot documentSnapshot = task.getResult();
                     if (documentSnapshot.exists()) {
                         Timber.d("%s: Username is valid.", TAG);
-                        sendMessage(documentReference, recipient, message);
+                        String timestamp = getTimestamp();
+                        createThread(recipient);
+                        populateMessagesSent(documentReference, recipient, message, timestamp);
+                        populateMessagesReceived(documentReference, recipient, message, timestamp);
                     } else {
                         Timber.d("%s: Username not found.", TAG);
                         showErrorMessage();
@@ -84,28 +89,83 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
         });
     }
 
-    public void sendMessage(DocumentReference documentReference, String recipient, String message) {
+    public String getTimestamp() {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
+        String timestamp = simpleDateFormat.format(new Date());
+        return timestamp;
+    }
+
+    public void createThread(String threadContact) {
+        Map<String, Object> threadMap = new HashMap<>();
+
+        threadMap.put("threadContact", threadContact);
+
+        db.collection("users").document(sender)
+                .collection("threads").document(threadContact)
+                .set(threadMap)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Timber.d("%s: Created thread: %s", TAG, threadContact);
+
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Timber.d("%s: Failed to create threadContact %s for sender %s", TAG, threadContact, sender);
+                    }
+                });
+
+    }
+
+    public void populateMessagesSent(DocumentReference documentReference, String recipient, String message, String timestamp) {
         Map<String, Object> messageMap = new HashMap<>();
 
-        //messageMap.put("sender", sender);
         messageMap.put("message", message);
-        messageMap.put("emotion", "");
+        messageMap.put("timestamp", timestamp);
 
-        db.collection("users").document(recipient)
-                .collection("threads").document(sender)
-                .collection("messagesReceived").document(message)
+        db.collection("users").document(sender)
+                .collection("threads").document(recipient)
+                .collection("messagesSent").document(timestamp)
                 .set(messageMap)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
-                        Timber.d("%s: Message sent to %s.", TAG, recipient);
+                        Timber.d("%s: Message populated in messageSent for %s.", TAG, sender);
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Timber.d("%s: Failed to populate messagesSent for %s.", TAG, sender);
+                    }
+                });
+    }
+
+    public void populateMessagesReceived(DocumentReference documentReference, String recipient, String message, String timestamp) {
+        Map<String, Object> messageMap = new HashMap<>();
+
+        //messageMap.put("sender", sender);
+        messageMap.put("message", message);
+        messageMap.put("timestamp", timestamp);
+        messageMap.put("emotion", "");
+
+        db.collection("users").document(recipient)
+                .collection("threads").document(sender)
+                .collection("messagesReceived").document(timestamp)
+                .set(messageMap)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Timber.d("%s: Message populated in messageReceived for %s.", TAG, recipient);
                         startActivity(new Intent(NewThread.this, ViewThread.class));
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Timber.d("%s: Failed to send message to %s.", TAG, recipient);
+                        Timber.d("%s: Failed to populate messagesReceived for %s.", TAG, recipient);
                     }
                 });
 

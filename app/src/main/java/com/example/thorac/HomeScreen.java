@@ -54,6 +54,13 @@ public class HomeScreen extends AppCompatActivity implements View.OnClickListene
     }
 
     private void populateListOfThreads() {
+        /*
+        All threads have threadContact as a field now
+        TODO: Find in what format the .get() method below returns ALL THE DOCUMENTS
+        TODO: Convert whatever it returns to an array
+        TODO: Use ArrayAdapter to show list of threads in HomeScreen
+        TODO: Show list of threads in HomeScreen.
+         */
         String[] listOfThreads;
 
 
@@ -64,7 +71,6 @@ public class HomeScreen extends AppCompatActivity implements View.OnClickListene
                     @Override
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         if (task.isSuccessful()) {
-
                         }
                     }
                 });
