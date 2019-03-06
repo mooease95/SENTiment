@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import co.chatsdk.ui.main.BaseActivity;
 import timber.log.Timber;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -13,12 +14,14 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.DocumentReference;
@@ -31,6 +34,7 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
 
     private static final String TAG = "EmailAuth";
 
+    private EditText mUsernameField;
     private EditText mEmailField;
     private EditText mPasswordField;
 
@@ -43,6 +47,7 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_email_auth);
 
+        mUsernameField = findViewById(R.id.usernameField);
         mEmailField = findViewById(R.id.emailField);
         mPasswordField = findViewById(R.id.passwordField);
 
@@ -59,9 +64,9 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
         super.onStart();
     }
 
-    private void createAccount(String email, String password) {
-        Timber.d("%s: createAccount: %s", TAG, email);
-        if(!validateForm()) {
+    private void createAccount(String username, String email, String password) {
+        Timber.d("%s: createAccount: %s", TAG, username);
+        if(!validateForm() && !validateUserName()) {
             return;
         }
 
@@ -75,8 +80,10 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "createUserWithEmail:success");
                             FirebaseUser user = mAuth.getCurrentUser();
-                            addToCloud(email);
+                            updateDisplayName(user, username, email);
+                            addToCloud(username, email);
                             updateUI(user);
+                            startActivity(new Intent(EmailAuth.this, ThreadLists.class));
                         } else {
                             // If sign in fails, display a message to the user.
                             Log.w(TAG, "createUserWithEmail:failure", task.getException());
@@ -85,29 +92,53 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
                             updateUI(null);
                         }
 
-                        // [START_EXCLUDE]
+                         // [START_EXCLUDE]
                         hideProgressDialog();
                         // [END_EXCLUDE]
                     }
                 });
     }
 
-    private void addToCloud(String email) {
+    private void addToCloud(String username, String email) {
         Map<String, Object> user = new HashMap<>();
+        user.put("Username", username);
         user.put("Email", email);
         user.put("RepresentationPreference", "");
 
-        db.collection("users").add(user)
-                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+        db.collection("users").document(username).set(user)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
-                    public void onSuccess(DocumentReference documentReference) {
-                        Timber.d("%sDocument ", TAG);
+                    public void onSuccess(Void aVoid) {
+                        Timber.d("%s: Document added successfully.", TAG);
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Timber.d("%s: Error writing document.", TAG);
                     }
                 });
 
     }
 
+    public void updateDisplayName(FirebaseUser user, String username, String email) {
+        UserProfileChangeRequest profileUpdate = new UserProfileChangeRequest.Builder()
+                .setDisplayName(username)
+                .build();
+
+        user.updateProfile(profileUpdate)
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        if (task.isSuccessful()) {
+                            Timber.d("%s: User profile updated.", TAG);
+                        }
+                    }
+                });
+    }
+
     private void signIn(String email, String password) {
+        Log.d(TAG, "signIn");
         Timber.d("%s: signIn: %s", TAG, email);
         if(!validateForm()) {
             return;
@@ -125,6 +156,7 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
                             Timber.d("signInWithEmail:success");
                             FirebaseUser user = mAuth.getCurrentUser();
                             updateUI(user);
+                            startActivity(new Intent(EmailAuth.this, ThreadLists.class));
                         } else {
                             // If sign in fails, display a message to the user.
                             Timber.tag(TAG).w(task.getException(), "signInWithEmail:failure");
@@ -143,7 +175,7 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
                 });
     }
 
-    private void updateUI(FirebaseUser user) {
+    private void updateUI(FirebaseUser user) { //Do I need this?
         if(user != null) {
             findViewById(R.id.signin).setVisibility(View.GONE);
             findViewById(R.id.register).setVisibility(View.GONE);
@@ -155,6 +187,22 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
             findViewById(R.id.emailField).setVisibility(View.GONE);
             findViewById(R.id.passwordField).setVisibility(View.GONE);
         }
+    }
+
+    private boolean validateUserName() {
+        boolean valid = true;
+
+        //TODO: Check username is not already in use!
+
+        String username = mUsernameField.getText().toString();
+        if (TextUtils.isEmpty(username)) {
+            mUsernameField.setError("Required.");
+            valid = false;
+        } else {
+            mUsernameField.setError(null);
+        }
+
+        return valid;
     }
 
     private boolean validateForm() {
@@ -184,7 +232,7 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
     public void onClick(View view) {
         int i = view.getId();
         if (i == R.id.register) {
-            createAccount(mEmailField.getText().toString(), mPasswordField.getText().toString());
+            createAccount(mUsernameField.getText().toString(), mEmailField.getText().toString(), mPasswordField.getText().toString());
         } else if(i == R.id.signin) {
             signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
         }
