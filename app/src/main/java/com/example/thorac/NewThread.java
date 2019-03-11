@@ -67,6 +67,13 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
         }
     }
 
+    //Check if recipient already exists as a thread
+    //If they do,
+    // populate messagesSent and populate messagesReceived
+    //If they don't,
+    // Create thread for sender and recipient
+    // Increment threadCount for sender and recipient
+    // populate messagesSent and populate messagesReceived
     public void validateAndSend(String recipient, String message) {
         DocumentReference senderReference = db.collection("users").document(sender);
         DocumentReference recipientReference = db.collection("users").document(recipient);
@@ -78,13 +85,6 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
                     Timber.d("%s: Username is valid.", TAG);
                     String timestamp = getTimestamp();
                     checkForThread(senderReference, recipient);
-                    //Check if recipient already exists as a thread
-                    //If they do,
-                       // populate messagesSent and populate messagesReceived
-                    //If they don't,
-                       // Create thread for sender and recipient
-                       // Increment threadCount for sender and recipient
-                       // populate messagesSent and populate messagesReceived
                     populateMessagesSent(recipientReference, recipient, message, timestamp);
                     populateMessagesReceived(recipientReference, recipient, message, timestamp);
                 } else {
@@ -145,7 +145,7 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
                         Timber.d("%s: Document exists.", TAG);
                         Map<String, Object> userMap = new HashMap<>();
                         userMap = document.getData();
-                        String numberOfThreads = Objects.requireNonNull(userMap.get("NumberOfThreads")).toString();
+                        String numberOfThreads = Objects.requireNonNull(Objects.requireNonNull(userMap).get("NumberOfThreads")).toString();
                         int threadCount = Integer.parseInt(numberOfThreads);
                         String updatedNumberOfThreads = Integer.toString(threadCount+1);
                         userMap.put("NumberOfThreads", updatedNumberOfThreads);
@@ -201,7 +201,7 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
                     @Override
                     public void onSuccess(Void aVoid) {
                         Timber.d("%s: Message populated in messageReceived for %s.", TAG, recipient);
-                        startActivity(new Intent(NewThread.this, ViewThread.class));
+                        startActivity(new Intent(NewThread.this, ThreadMessages.class));
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {

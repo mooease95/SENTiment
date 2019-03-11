@@ -10,11 +10,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".ThreadLists"></activity>
-        <activity
-            android:name=".ViewThread"
-            android:label="@string/title_activity_view_thread"
-            android:theme="@style/AppTheme.NoActionBar" />
+        <activity android:name=".ThreadMessages"></activity>
+        <activity android:name=".ThreadLists" />
         <activity android:name=".NewThread" />
         <activity android:name=".EmailAuth">
             <intent-filter>
@@ -23,9 +20,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".HomeScreen"
-            android:label="@string/thorac" />
     </application>
 
 </manifest>
