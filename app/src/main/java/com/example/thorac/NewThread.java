@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class NewThread extends AppCompatActivity implements View.OnClickListener {
 
@@ -67,23 +68,28 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
     }
 
     public void validateAndSend(String recipient, String message) {
-        DocumentReference documentReference = db.collection("users").document(recipient);
+        DocumentReference senderReference = db.collection("users").document(sender);
+        DocumentReference recipientReference = db.collection("users").document(recipient);
 
-        documentReference.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                if (task.isSuccessful()) {
-                    DocumentSnapshot documentSnapshot = task.getResult();
-                    if (documentSnapshot.exists()) {
-                        Timber.d("%s: Username is valid.", TAG);
-                        String timestamp = getTimestamp();
-                        createThread(recipient);
-                        populateMessagesSent(documentReference, recipient, message, timestamp);
-                        populateMessagesReceived(documentReference, recipient, message, timestamp);
-                    } else {
-                        Timber.d("%s: Username not found.", TAG);
-                        showErrorMessage();
-                    }
+        recipientReference.get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                DocumentSnapshot userSnapshot = task.getResult();
+                if (userSnapshot.exists()) { //Checking that this is a valid user
+                    Timber.d("%s: Username is valid.", TAG);
+                    String timestamp = getTimestamp();
+                    checkForThread(senderReference, recipient);
+                    //Check if recipient already exists as a thread
+                    //If they do,
+                       // populate messagesSent and populate messagesReceived
+                    //If they don't,
+                       // Create thread for sender and recipient
+                       // Increment threadCount for sender and recipient
+                       // populate messagesSent and populate messagesReceived
+                    populateMessagesSent(recipientReference, recipient, message, timestamp);
+                    populateMessagesReceived(recipientReference, recipient, message, timestamp);
+                } else {
+                    Timber.d("%s: Username not found.", TAG);
+                    showErrorMessage();
                 }
             }
         });
@@ -95,20 +101,29 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
         return timestamp;
     }
 
-    public void createThread(String threadContact) {
+    public void checkForThread(DocumentReference senderReference, String recipient) {
+        senderReference.collection("threads").document(recipient).get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                DocumentSnapshot threadSnapshot = task.getResult();
+                if (!threadSnapshot.exists()) { //No current thread between the two users
+                    createThread(sender, recipient);
+                    createThread(recipient, sender);
+                }
+            }
+        });
+    }
+
+    public void createThread(String user, String threadContact) {
         Map<String, Object> threadMap = new HashMap<>();
 
         threadMap.put("threadContact", threadContact);
 
-        db.collection("users").document(sender)
+        db.collection("users").document(user)
                 .collection("threads").document(threadContact)
                 .set(threadMap)
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Timber.d("%s: Created thread: %s", TAG, threadContact);
-
-                    }
+                .addOnSuccessListener(aVoid -> {
+                    Timber.d("%s: Created thread: %s", TAG, threadContact);
+                    updateThreadCount(user);
                 })
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
@@ -117,6 +132,33 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
                     }
                 });
 
+    }
+
+    public void updateThreadCount(String user) {
+        DocumentReference documentReference = db.collection("users").document(user);
+        documentReference.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    if (document.exists()) {
+                        Timber.d("%s: Document exists.", TAG);
+                        Map<String, Object> userMap = new HashMap<>();
+                        userMap = document.getData();
+                        String numberOfThreads = Objects.requireNonNull(userMap.get("NumberOfThreads")).toString();
+                        int threadCount = Integer.parseInt(numberOfThreads);
+                        String updatedNumberOfThreads = Integer.toString(threadCount+1);
+                        userMap.put("NumberOfThreads", updatedNumberOfThreads);
+                        db.collection("users").document(user)
+                                .update(userMap);
+                        Timber.d("%s: NumberOfThreads updated successfully from %s to %s.", TAG,
+                                numberOfThreads, updatedNumberOfThreads);
+                    } else {
+                        Timber.d("%s: Document does not exist.", TAG);
+                    }
+                }
+            }
+        });
     }
 
     public void populateMessagesSent(DocumentReference documentReference, String recipient, String message, String timestamp) {

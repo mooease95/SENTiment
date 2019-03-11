@@ -104,6 +104,7 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
         user.put("Username", username);
         user.put("Email", email);
         user.put("RepresentationPreference", "");
+        user.put("NumberOfThreads", "0");
 
         db.collection("users").document(username).set(user)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {

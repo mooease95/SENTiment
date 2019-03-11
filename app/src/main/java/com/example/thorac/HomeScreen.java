@@ -17,7 +17,10 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+
+import java.util.Map;
 
 public class HomeScreen extends AppCompatActivity implements View.OnClickListener {
 
@@ -49,7 +52,7 @@ public class HomeScreen extends AppCompatActivity implements View.OnClickListene
 
         Log.d(TAG, "Reached onCreate");
 
-        populateListOfThreads();
+        //populateListOfThreads();
 
     }
 
@@ -71,7 +74,14 @@ public class HomeScreen extends AppCompatActivity implements View.OnClickListene
                     @Override
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot documentSnapshot : task.getResult()) {
+                                Timber.d("%s: Fetching all Threads.", TAG);
+                                Map<String, Object> threadMap = documentSnapshot.getData();
+                                //listOfThreads[0] = threadMap.get("threadContact").toString();
+
+                            }
                         }
+
                     }
                 });
 
