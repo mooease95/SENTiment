@@ -10,7 +10,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:67370383203:android:cf9050d4f0c72803",
         "android_client_info": {
-          "package_name": "com.example.thorac"
+          "package_name": "com.example.sentiment"
         }
       },
       "oauth_client": [
@@ -18,7 +18,7 @@
           "client_id": "67370383203-hnhvnlthu0aevu3j1v518ep5o8cmm9mv.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.thorac",
+            "package_name": "com.example.sentiment",
             "certificate_hash": "45f898797e21cfe047facb45c19579c86bbc380f"
           }
         },

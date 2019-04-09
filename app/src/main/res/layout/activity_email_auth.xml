@@ -14,7 +14,7 @@
         android:layout_marginStart="168dp"
         android:layout_marginLeft="168dp"
         android:layout_marginTop="148dp"
-        android:text="@string/thorac"
+        android:text="@string/sentiment"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:text="SENTiment" />

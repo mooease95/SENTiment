@@ -1,4 +1,4 @@
-package com.example.thorac;
+package com.example.sentiment;
 
 class User {
 

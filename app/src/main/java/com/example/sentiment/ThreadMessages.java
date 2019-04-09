@@ -1,4 +1,4 @@
-package com.example.thorac;
+package com.example.sentiment;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -9,14 +9,10 @@ import timber.log.Timber;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.TextView;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
@@ -33,10 +29,6 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 public class ThreadMessages extends AppCompatActivity implements View.OnClickListener {
-
-    /*
-    TODO: Read on how to lay out the messages
-     */
 
     private static final String TAG = "ThreadMessages: ";
 

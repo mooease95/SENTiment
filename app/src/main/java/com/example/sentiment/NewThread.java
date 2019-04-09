@@ -1,4 +1,4 @@
-package com.example.thorac;
+package com.example.sentiment;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;

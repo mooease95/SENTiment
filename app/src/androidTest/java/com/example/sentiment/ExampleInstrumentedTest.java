@@ -1,4 +1,4 @@
-package com.example.thorac;
+package com.example.sentiment;
 
 import android.content.Context;
 
@@ -22,6 +22,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getTargetContext();
 
-        assertEquals("com.example.thorac", appContext.getPackageName());
+        assertEquals("com.example.sentiment", appContext.getPackageName());
     }
 }
