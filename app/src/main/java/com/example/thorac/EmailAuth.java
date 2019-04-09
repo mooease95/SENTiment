@@ -2,7 +2,6 @@ package com.example.thorac;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import co.chatsdk.ui.main.BaseActivity;
 import timber.log.Timber;
 
 import android.content.Intent;
@@ -11,36 +10,24 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
 
+import com.google.android.gms.tasks.Continuation;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.AuthResult;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.UserProfileChangeRequest;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class EmailAuth extends MainActivity implements View.OnClickListener {
+public class EmailAuth extends AppCompatActivity implements View.OnClickListener {
 
     private static final String TAG = "EmailAuth";
 
     private EditText mUsernameField;
-    private EditText mEmailField;
-    private EditText mPasswordField;
-
-    private FirebaseAuth mAuth;
-
     private FirebaseFirestore db;
+
+    private User currentUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,13 +35,9 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
         setContentView(R.layout.activity_email_auth);
 
         mUsernameField = findViewById(R.id.usernameField);
-        mEmailField = findViewById(R.id.emailField);
-        mPasswordField = findViewById(R.id.passwordField);
 
         findViewById(R.id.signin).setOnClickListener(this);
         findViewById(R.id.register).setOnClickListener(this);
-
-        mAuth = FirebaseAuth.getInstance();
 
         db = FirebaseFirestore.getInstance();
     }
@@ -64,136 +47,20 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
         super.onStart();
     }
 
-    private void createAccount(String username, String email, String password) {
-        Timber.d("%s: createAccount: %s", TAG, username);
-        if(!validateForm() && !validateUserName()) {
-            return;
-        }
-
-        showProgressDialog();
-
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, new OnCompleteListener() {
-                    @Override
-                    public void onComplete(@NonNull Task task) {
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Log.d(TAG, "createUserWithEmail:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            updateDisplayName(user, username, email);
-                            addToCloud(username, email);
-                            updateUI(user);
-                            startActivity(new Intent(EmailAuth.this, ThreadLists.class));
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            Log.w(TAG, "createUserWithEmail:failure", task.getException());
-                            Toast.makeText(EmailAuth.this, "Authentication failed.",
-                                    Toast.LENGTH_SHORT).show();
-                            updateUI(null);
-                        }
-
-                         // [START_EXCLUDE]
-                        hideProgressDialog();
-                        // [END_EXCLUDE]
-                    }
-                });
-    }
-
-    private void addToCloud(String username, String email) {
-        Map<String, Object> user = new HashMap<>();
-        user.put("Username", username);
-        user.put("Email", email);
-        user.put("RepresentationPreference", "");
-        user.put("NumberOfThreads", "0");
-
-        db.collection("users").document(username).set(user)
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Timber.d("%s: Document added successfully.", TAG);
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Timber.d("%s: Error writing document.", TAG);
-                    }
-                });
-
-    }
-
-    public void updateDisplayName(FirebaseUser user, String username, String email) {
-        UserProfileChangeRequest profileUpdate = new UserProfileChangeRequest.Builder()
-                .setDisplayName(username)
-                .build();
-
-        user.updateProfile(profileUpdate)
-                .addOnCompleteListener(new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if (task.isSuccessful()) {
-                            Timber.d("%s: User profile updated.", TAG);
-                        }
-                    }
-                });
-    }
-
-    private void signIn(String email, String password) {
-        Log.d(TAG, "signIn");
-        Timber.d("%s: signIn: %s", TAG, email);
-        if(!validateForm()) {
-            return;
-        }
-
-        showProgressDialog();
-
-        mAuth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Timber.d("signInWithEmail:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            updateUI(user);
-                            startActivity(new Intent(EmailAuth.this, ThreadLists.class));
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            Timber.tag(TAG).w(task.getException(), "signInWithEmail:failure");
-                            Toast.makeText(EmailAuth.this, "Authentication failed.",
-                                    Toast.LENGTH_SHORT).show();
-                            updateUI(null);
-                        }
-
-                        // [START_EXCLUDE]
-//                        if (!task.isSuccessful()) {
-//                            mStatusTextView.setText(R.string.auth_failed);
-//                        }
-                        hideProgressDialog();
-                        // [END_EXCLUDE]
-                    }
-                });
-    }
-
-    private void updateUI(FirebaseUser user) { //Do I need this?
-        if(user != null) {
-            findViewById(R.id.signin).setVisibility(View.GONE);
-            findViewById(R.id.register).setVisibility(View.GONE);
-            findViewById(R.id.emailField).setVisibility(View.GONE);
-            findViewById(R.id.passwordField).setVisibility(View.VISIBLE);
-        } else {
-            findViewById(R.id.signin).setVisibility(View.VISIBLE);
-            findViewById(R.id.register).setVisibility(View.VISIBLE);
-            findViewById(R.id.emailField).setVisibility(View.GONE);
-            findViewById(R.id.passwordField).setVisibility(View.GONE);
+    @Override
+    public void onClick(View view) {
+        int i = view.getId();
+        if (i == R.id.register) {
+            System.out.println("Just clicked register.");
+            createAccount(mUsernameField.getText().toString());
+        } else if(i == R.id.signin) {
+            System.out.println("Just clicked signIn.");
+            signIn(mUsernameField.getText().toString());
         }
     }
 
-    private boolean validateUserName() {
+    private boolean validateForm() {
         boolean valid = true;
-
-        //TODO: Check username is not already in use!
 
         String username = mUsernameField.getText().toString();
         if (TextUtils.isEmpty(username)) {
@@ -206,37 +73,95 @@ public class EmailAuth extends MainActivity implements View.OnClickListener {
         return valid;
     }
 
-    private boolean validateForm() {
-        boolean valid = true;
-
-        String email = mEmailField.getText().toString();
-        if (TextUtils.isEmpty(email)) {
-            mEmailField.setError("Required.");
-            valid = false;
+    private void instantiateUser(String username, int numberOfThreads) {
+        currentUser = new User();
+        currentUser.setUsername(username);
+        if (numberOfThreads < 0) { //-1 sent from sign in, 0 sent from create account
+            obtainNumberOfThreads(username);
         } else {
-            mEmailField.setError(null);
-        }
-
-        String password = mPasswordField.getText().toString();
-        if (TextUtils.isEmpty(password)) {
-            mPasswordField.setError("Required.");
-            valid = false;
-        } else {
-            mPasswordField.setError(null);
-        }
-
-        return valid;
-    }
-
-
-    @Override
-    public void onClick(View view) {
-        int i = view.getId();
-        if (i == R.id.register) {
-            createAccount(mUsernameField.getText().toString(), mEmailField.getText().toString(), mPasswordField.getText().toString());
-        } else if(i == R.id.signin) {
-            signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
+            currentUser.setNumberOfThreads(numberOfThreads); //should be 0 here all the time
         }
     }
 
+    private void obtainNumberOfThreads(String username) {
+        System.out.println(TAG + ": at obtainNumberOfThreads for " + username);
+        DocumentReference documentReference = db.collection("users").document(username);
+        System.out.println(TAG + ": documentReference is " + documentReference.getId());
+
+        documentReference.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+            @Override
+            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                System.out.println(TAG + ": getting document snapshot");
+                if (documentSnapshot.exists()) {
+                    int numberOfThreads = Integer.parseInt(documentSnapshot.get("numberOfThreads").toString());
+                    System.out.println(TAG + ": numberOfThreads is " + numberOfThreads);
+                    currentUser.setNumberOfThreads(numberOfThreads);
+                    startNextActivity();
+                }
+            }
+        });
+        System.out.println(TAG + ": Finishing obtainNumberOfThreads.");
+
+    }
+
+
+    private void createAccount(String username) {
+        Timber.d("%s: createAccount: %s", TAG, username);
+
+        instantiateUser(username, 0);
+
+        addToCloud(username);
+
+        startNextActivity();
+
+    }
+
+    private void addToCloud(String username) {
+
+        System.out.println("Adding to Cloud: " + username);
+
+        db.collection("users").document(username).set(currentUser)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Timber.d("%s: Document added successfully.", TAG);
+                        System.out.println("Document added successfully for: " + username);
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Timber.d("%s: Error writing document.", TAG);
+                        System.out.println("Error writing document for: " + username);
+                    }
+                });
+        System.out.println("Finished adding to Cloud: " + username);
+    }
+
+    private void signIn(String username) {
+        Log.d(TAG, "signIn");
+        Timber.d("%s: signIn: %s", TAG, username);
+        if(!validateForm()) {
+            return;
+        }
+
+        //If user does not exist, display a different page
+
+        instantiateUser(username, -1);
+
+        //Fetch the number of threads ///This now happens when instantiating
+        //obtainNumberOfThreads(username);
+
+        //startNextActivity();
+    }
+
+    private void startNextActivity() {
+        Intent intent = new Intent(EmailAuth.this, ThreadLists.class);
+        intent.putExtra("systemUser", currentUser.getUsername());
+        intent.putExtra("numberOfThreads", currentUser.getNumberOfThreads());
+
+        //System.out.println("EmailAuth numberOfThreads: " + currentUser.getNumberOfThreads());
+
+        startActivity(intent);
+    }
 }

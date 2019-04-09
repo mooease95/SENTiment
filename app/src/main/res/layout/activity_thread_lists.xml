@@ -6,6 +6,15 @@
     android:layout_height="match_parent"
     tools:context=".ThreadLists">
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_threadLists"
+        android:scrollbars="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="180dp">
+    </androidx.recyclerview.widget.RecyclerView>
+
+
     <Button
         android:id="@+id/createNewThread"
         android:layout_width="wrap_content"
@@ -13,18 +22,9 @@
         android:layout_marginEnd="69dp"
         android:layout_marginRight="69dp"
         android:layout_marginBottom="80dp"
+        android:onClick="onClick"
         android:text="@string/creating_thread"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
-    <ListView
-        android:id="@+id/threadListview"
-        android:layout_width="395dp"
-        android:layout_height="587dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginTop="8dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

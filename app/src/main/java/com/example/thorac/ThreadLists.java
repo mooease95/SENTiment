@@ -2,34 +2,37 @@ package com.example.thorac;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import timber.log.Timber;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.TextView;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 
-public class ThreadLists extends AppCompatActivity implements View.OnClickListener {
+public class ThreadLists extends AppCompatActivity implements ThreadListsAdapter.ItemClickListener {
 
     private static final String TAG = "ThreadLists";
 
+    ThreadListsAdapter threadListsAdapter;
+
+    private RecyclerView recyclerView;
+    private ThreadListsAdapter mAdapter;
+    private RecyclerView.LayoutManager layoutManager;
+
+    private User currentUser;
+    private String username;
     private int numberOfThreads;
 
     private String sender;
@@ -37,7 +40,7 @@ public class ThreadLists extends AppCompatActivity implements View.OnClickListen
     FirebaseFirestore db;
 
     ListView listView;
-    String threadContacts[];
+    String[] threadContacts;
 
 
     @Override
@@ -45,40 +48,33 @@ public class ThreadLists extends AppCompatActivity implements View.OnClickListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_thread_lists);
 
-        findViewById(R.id.createNewThread).setOnClickListener(this);
+        System.out.println("Started ThreadLists.");
 
-        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        username = getIntent().getStringExtra("systemUser");
+        numberOfThreads = getIntent().getIntExtra("numberOfThreads", 0);
 
-        FirebaseUser user = mAuth.getCurrentUser();
+        System.out.println("Inherited from previous activity: " + username + ", " + numberOfThreads);
 
-        if (user != null) {
-            if (user.getDisplayName() != null) {
-                sender = user.getDisplayName();
-            }
-        }
+        currentUser = new User();
+        currentUser.setUsername(username);
+        currentUser.setNumberOfThreads(numberOfThreads);
+
+        System.out.println(TAG + ": Inherited currentUser - " + currentUser.getUsername());
+
+        threadContacts = new String[numberOfThreads];
 
         db = FirebaseFirestore.getInstance();
 
-        getNumberOfThreads();
+        if (numberOfThreads > 0) {
+            getListOfThreads();
+        } else {
+            createRecyclerView();
+        }
 
-
-        getListOfThreads();
-
-    }
-
-    public void getNumberOfThreads() {
-        db.collection("users").document(sender)
-                .get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                String threadCount = Objects.requireNonNull(Objects.requireNonNull(task.getResult()).get("NumberOfThreads")).toString();
-                numberOfThreads = Integer.parseInt(threadCount);
-                threadContacts = new String[numberOfThreads];
-            }
-        });
     }
 
     public void getListOfThreads() {
-        db.collection("users").document(sender).collection("threads")
+        db.collection("users").document(username).collection("threads")
                 .get()
                 .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                     @Override
@@ -87,41 +83,55 @@ public class ThreadLists extends AppCompatActivity implements View.OnClickListen
                             Timber.d("%s: Getting List of Threads.", TAG);
                             int index = 0;
                             for (QueryDocumentSnapshot document : task.getResult()) {
-                                String contact = Objects.requireNonNull(document.getData().get("threadContact")).toString();
+                                String contact = document.getData().get("threadContact").toString();
                                 threadContacts[index] = contact;
+                                System.out.println("ThreadLists fetched: " + threadContacts[index]);
+                                System.out.println("Should have got: " + contact);
                                 index++;
                             }
-                            viewListOfThreads();
+                            createRecyclerView();
                         }
                     }
                 });
     }
 
-    private void viewListOfThreads() {
-        CustomListAdapter customListAdapter = new CustomListAdapter(this,
-                threadContacts);
-        listView = (ListView) findViewById(R.id.threadListview);
-        listView.setAdapter(customListAdapter);
+    private void createRecyclerView() {
+        recyclerView = (RecyclerView) findViewById(R.id.recycler_threadLists);
+        layoutManager = new LinearLayoutManager(this);
+        recyclerView.setLayoutManager(layoutManager);
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent intent = new Intent(ThreadLists.this, ThreadMessages.class);
-                String threadContact = threadContacts[position];
-                intent.putExtra("threadUser", threadContact);
-                System.out.println("ThreadLists class got: " + threadContact);
-                startActivity(intent);
-            }
-        });
+        mAdapter = new ThreadListsAdapter(threadContacts);
+        mAdapter.setClickListener(this);
 
+        recyclerView.setAdapter(mAdapter);
+
+        //findViewById(R.id.createNewThread).setOnClickListener(this);
     }
 
     @Override
+    public void onItemClick(View view, int position) {
+        String threadName = mAdapter.getItem(position);
+
+        Intent intent = new Intent(ThreadLists.this, ThreadMessages.class);
+        intent.putExtra("systemUser", username);
+        intent.putExtra("threadContact", threadName);
+
+        startActivity(intent);
+
+    }
+
     public void onClick(View view) {
         int i = view.getId();
         if (i == R.id.createNewThread) {
-            startActivity(new Intent(ThreadLists.this, NewThread.class));
+            startNextActivity();
         }
+    }
+
+    private void startNextActivity() {
+        Intent intent = new Intent(ThreadLists.this, NewThread.class);
+        intent.putExtra("systemUser", username);
+
+        startActivity(intent);
     }
 
 }

@@ -13,8 +13,6 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -32,7 +30,7 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
     private EditText mRecipient;
     private EditText mMessage;
 
-    private String sender;
+    private String username; //Remove since now we have username as a field?
 
     private FirebaseFirestore db;
 
@@ -41,20 +39,13 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_new_thread);
 
+        username = getIntent().getStringExtra("systemUser");
+        System.out.println(TAG + ": Inherited currentUser - " + username);
+
         mRecipient = findViewById(R.id.newThreadRecipient);
         mMessage = findViewById(R.id.newThreadMessage);
 
         findViewById(R.id.newThreadSendMessage).setOnClickListener(this);
-
-        FirebaseAuth mAuth = FirebaseAuth.getInstance();
-
-        FirebaseUser user = mAuth.getCurrentUser();
-
-        if (user != null) {
-            if (user.getDisplayName() != null) {
-                sender = user.getDisplayName();
-            }
-        }
 
         db = FirebaseFirestore.getInstance();
     }
@@ -71,22 +62,30 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
     //If they do,
     // populate messagesSent and populate messagesReceived
     //If they don't,
-    // Create thread for sender and recipient
-    // Increment threadCount for sender and recipient
+    // Create thread for username and recipient
+    // Increment numberOfThreads for username and recipient
     // populate messagesSent and populate messagesReceived
     public void validateAndSend(String recipient, String message) {
-        DocumentReference senderReference = db.collection("users").document(sender);
+        DocumentReference senderReference = db.collection("users").document(username);
         DocumentReference recipientReference = db.collection("users").document(recipient);
+
+        System.out.println(TAG + ": senderReference - " + senderReference.getId());
+        System.out.println(TAG + ": recipientReference - " + recipientReference.getId());
 
         recipientReference.get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 DocumentSnapshot userSnapshot = task.getResult();
                 if (userSnapshot.exists()) { //Checking that this is a valid user
+                    System.out.println(TAG + ": username is valid.");
                     Timber.d("%s: Username is valid.", TAG);
                     String timestamp = getTimestamp();
                     checkForThread(senderReference, recipient);
-                    populateMessagesSent(recipientReference, recipient, message, timestamp);
-                    populateMessagesReceived(recipientReference, recipient, message, timestamp);
+                    //populateMessagesSent(recipientReference, recipient, message, timestamp);
+                    //populateMessagesReceived(recipientReference, recipient, message, timestamp);
+                    updateThreadCount(username);
+                    updateThreadCount(recipient);
+                    populateAllMessages(recipientReference, username, recipient, message, timestamp);
+                    populateAllMessages(senderReference, recipient, username, message, timestamp);
                 } else {
                     Timber.d("%s: Username not found.", TAG);
                     showErrorMessage();
@@ -106,8 +105,8 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
             if (task.isSuccessful()) {
                 DocumentSnapshot threadSnapshot = task.getResult();
                 if (!threadSnapshot.exists()) { //No current thread between the two users
-                    createThread(sender, recipient);
-                    createThread(recipient, sender);
+                    createThread(username, recipient);
+                    createThread(recipient, username);
                 }
             }
         });
@@ -123,12 +122,12 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
                 .set(threadMap)
                 .addOnSuccessListener(aVoid -> {
                     Timber.d("%s: Created thread: %s", TAG, threadContact);
-                    updateThreadCount(user);
+                    //updateThreadCount(user);
                 })
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Timber.d("%s: Failed to create threadContact %s for sender %s", TAG, threadContact, sender);
+                        Timber.d("%s: Failed to create threadContact %s for username %s", TAG, threadContact, username);
                     }
                 });
 
@@ -145,10 +144,10 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
                         Timber.d("%s: Document exists.", TAG);
                         Map<String, Object> userMap = new HashMap<>();
                         userMap = document.getData();
-                        String numberOfThreads = Objects.requireNonNull(Objects.requireNonNull(userMap).get("NumberOfThreads")).toString();
+                        String numberOfThreads = Objects.requireNonNull(Objects.requireNonNull(userMap).get("numberOfThreads")).toString();
                         int threadCount = Integer.parseInt(numberOfThreads);
                         String updatedNumberOfThreads = Integer.toString(threadCount+1);
-                        userMap.put("NumberOfThreads", updatedNumberOfThreads);
+                        userMap.put("numberOfThreads", updatedNumberOfThreads);
                         db.collection("users").document(user)
                                 .update(userMap);
                         Timber.d("%s: NumberOfThreads updated successfully from %s to %s.", TAG,
@@ -161,26 +160,88 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
         });
     }
 
+    public void populateAllMessages(DocumentReference documentReference, String sender, String recipient, String message, String timestamp) {
+
+        UserMessage userMessage = new UserMessage();
+        userMessage.setSender(sender);
+        userMessage.setRecipient(recipient);
+        userMessage.setMessage(message);
+        userMessage.setTimestamp(timestamp);
+        userMessage.setEmotion(getEmotion(message));
+
+
+//        Map<String, Object> messageMap = new HashMap<>();
+//
+//        messageMap.put("username", username);
+//        messageMap.put("recipient", recipient);
+//        messageMap.put("message", message);
+//        messageMap.put("timestamp", timestamp);
+//        messageMap.put("emotion", "");
+
+        db.collection("users").document(recipient)
+                .collection("threads").document(sender)
+                .collection("allMessages").document(timestamp)
+                .set(userMessage)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Timber.d("%s: Message populated in allMessages for %s.", TAG, recipient);
+                        startNextActivity(recipient);
+                        //startActivity(new Intent(NewThread.this, ThreadMessages.class)); //should send threadContact
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Timber.d("%s: Failed to populate allMessages for %s.", TAG, recipient);
+                    }
+                });
+    }
+
+    private void startNextActivity(String recipient) {
+        Intent intent = new Intent(NewThread.this, ThreadMessages.class);
+        intent.putExtra("systemUser", username);
+        intent.putExtra("threadContact", recipient);
+
+        //System.out.println("EmailAuth numberOfThreads: " + currentUser.getNumberOfThreads());
+
+        startActivity(intent);
+    }
+
+    private String getEmotion(String message) {
+        return "";
+    }
+
+    public void showErrorMessage() {
+
+    }
+
+
+
+
+
     public void populateMessagesSent(DocumentReference documentReference, String recipient, String message, String timestamp) {
         Map<String, Object> messageMap = new HashMap<>();
 
+        messageMap.put("username", username);
+        messageMap.put("recipient", recipient);
         messageMap.put("message", message);
         messageMap.put("timestamp", timestamp);
 
-        db.collection("users").document(sender)
+        db.collection("users").document(username)
                 .collection("threads").document(recipient)
                 .collection("messagesSent").document(timestamp)
                 .set(messageMap)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
-                        Timber.d("%s: Message populated in messageSent for %s.", TAG, sender);
+                        Timber.d("%s: Message populated in messageSent for %s.", TAG, username);
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Timber.d("%s: Failed to populate messagesSent for %s.", TAG, sender);
+                        Timber.d("%s: Failed to populate messagesSent for %s.", TAG, username);
                     }
                 });
     }
@@ -188,13 +249,14 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
     public void populateMessagesReceived(DocumentReference documentReference, String recipient, String message, String timestamp) {
         Map<String, Object> messageMap = new HashMap<>();
 
-        //messageMap.put("sender", sender);
+        messageMap.put("username", username);
+        messageMap.put("recipient", recipient);
         messageMap.put("message", message);
         messageMap.put("timestamp", timestamp);
         messageMap.put("emotion", "");
 
         db.collection("users").document(recipient)
-                .collection("threads").document(sender)
+                .collection("threads").document(username)
                 .collection("messagesReceived").document(timestamp)
                 .set(messageMap)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -212,12 +274,6 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
                 });
 
     }
-
-    public void showErrorMessage() {
-
-    }
-
-
 
 
 }
