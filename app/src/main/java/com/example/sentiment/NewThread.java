@@ -15,6 +15,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
@@ -84,8 +85,9 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
                     //populateMessagesReceived(recipientReference, recipient, message, timestamp);
                     updateThreadCount(username);
                     updateThreadCount(recipient);
-                    populateAllMessages(recipientReference, username, recipient, message, timestamp);
-                    populateAllMessages(senderReference, recipient, username, message, timestamp);
+
+                    populateAllMessages(senderReference, username, recipient, recipient, username, message, timestamp);
+                    populateAllMessages(recipientReference, username, recipient, username, recipient, message, timestamp);
                 } else {
                     Timber.d("%s: Username not found.", TAG);
                     showErrorMessage();
@@ -160,14 +162,17 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
         });
     }
 
-    public void populateAllMessages(DocumentReference documentReference, String sender, String recipient, String message, String timestamp) {
+    public void populateAllMessages(DocumentReference documentReference, String sender, String recipient,
+                                    String firestoreUser, String firestoreThread,
+                                    String message, String timestamp) {
 
         UserMessage userMessage = new UserMessage();
         userMessage.setSender(sender);
         userMessage.setRecipient(recipient);
         userMessage.setMessage(message);
         userMessage.setTimestamp(timestamp);
-        userMessage.setEmotion(getEmotion(message));
+        userMessage.setEmotion("");
+        userMessage.setServerTimestamp(FieldValue.serverTimestamp());
 
 
 //        Map<String, Object> messageMap = new HashMap<>();
@@ -178,8 +183,8 @@ public class NewThread extends AppCompatActivity implements View.OnClickListener
 //        messageMap.put("timestamp", timestamp);
 //        messageMap.put("emotion", "");
 
-        db.collection("users").document(recipient)
-                .collection("threads").document(sender)
+        db.collection("users").document(firestoreUser)
+                .collection("threads").document(firestoreThread)
                 .collection("allMessages").document(timestamp)
                 .set(userMessage)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {

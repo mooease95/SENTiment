@@ -16,8 +16,10 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
@@ -78,14 +80,17 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
         db = FirebaseFirestore.getInstance();
 
-        populateMessageList();
+        //populateMessageList();
 
-        //populateRealtimeMessagesList();
+        populateRealtimeMessagesList();
 
     }
 
     private void populateRealtimeMessagesList() {
-        db.collection("users")
+        db.collection("users").document(username)
+                .collection("threads").document(threadContact)
+                .collection("allMessages")
+                .orderBy("serverTimestamp", Query.Direction.ASCENDING)
                 .addSnapshotListener(new EventListener<QuerySnapshot>() {
                     @Override
                     public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
@@ -94,36 +99,30 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                             return;
                         }
 
+                        //remove all past messages
+                        messagesListString.clear();
 
-                    }
-                });
-    }
+                        //List<String> realtimeMessageListString = new ArrayList<>();
+                        int index = 0;
 
-
-    public void populateMessageList() {
-        db.collection("users").document(username)
-                .collection("threads").document(threadContact)
-                .collection("allMessages")
-                .get()
-                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                        if (task.isSuccessful()) {
-                            Timber.d("%s: Getting all messages for user %s with %s.", TAG, username, threadContact);
-                            int index = 0;
-                            for (QueryDocumentSnapshot documentSnapshot : task.getResult()) {
-                                String message = documentSnapshot.getData().get("message").toString();
-                                messagesListString.add(index, message);
-                                System.out.println(TAG + "Fetched message - " + message);
-                                System.out.println(TAG + "Added message - " + messagesListString.get(index));
-
-                                //we do not want these yet
-//                                UserMessage userMessage = createUserMessage(documentSnapshot);
-//                                messagesList.set(index, userMessage);
-                                index++;
+                        for (QueryDocumentSnapshot doc: queryDocumentSnapshots) {
+                            if (doc.get("message") != null) {
+                                //Here sort between username and threadContact
+                                String message = doc.getString("message");
+                                String sender = doc.getString("sender");
+                                if (sender.equals(username)) {
+                                    String messageToDisplay = "You: " + message;
+                                    messagesListString.add(index, messageToDisplay);
+                                    index++;
+                                } else if (sender.equals(threadContact)){
+                                    String messageToDisplay = threadContact + ": " + message;
+                                    messagesListString.add(index, messageToDisplay);
+                                    index++;
+                                }
+                                //messagesListString.add(doc.getString("message"));
                             }
-                            createRecyclerView();
                         }
+                        createRecyclerView();
                     }
                 });
     }
@@ -148,22 +147,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         recyclerView.setAdapter(mAdapter);
     }
 
-    public UserMessage createUserMessage(DocumentSnapshot documentSnapshot) {
-        UserMessage userMessage = new UserMessage();
-        String tempSender = documentSnapshot.getData().get("sender").toString();
-        String tempRecipient = documentSnapshot.getData().get("recipient").toString();
-        String message = documentSnapshot.getData().get("message").toString();
-        String timestamp = documentSnapshot.getData().get("timestamp").toString();
-        String emotion = documentSnapshot.getData().get("emotion").toString();
-        userMessage.setSender(tempSender);
-        userMessage.setRecipient(tempRecipient);
-        userMessage.setMessage(message);
-        userMessage.setTimestamp(timestamp);
-        userMessage.setEmotion(emotion);
-
-        return userMessage;
-    }
-
     @Override
     public void onClick(View view) {
         int i = view.getId();
@@ -176,8 +159,13 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
     private void validateAndSend(String newMessage) {
         //first display it to screen? -> Remove after setting up realtime listeners
-        int indexOfLastMessage = messagesListString.size();
-        messagesListString.add(indexOfLastMessage, newMessage);
+//        int indexOfLastMessage = messagesListString.size();
+//        messagesListString.add(indexOfLastMessage, newMessage);
+
+        System.out.println(TAG + "Size of list now is - " + messagesListString.size());
+        for (int elements = 0; elements < messagesListString.size(); elements++) {
+            System.out.println(TAG + "messageListString(" + elements + "): " + messagesListString.get(elements));
+        }
 
         DocumentReference senderReference = db.collection("users").document(username);
         DocumentReference recipientReference = db.collection("users").document(threadContact);
@@ -193,8 +181,19 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                     if (documentSnapshot.exists()) {
                         System.out.println(TAG + "Adding document" + recipientReference.getId());
                         String timestamp = getTimestamp();
-                        populateAllMessages(senderReference, username, threadContact, newMessage, timestamp);
-                        populateAllMessages(recipientReference, threadContact, username, newMessage, timestamp);
+
+                        //Create the userMessage with sender as current user and thread contact as recipient
+                        //Because this user has clicked on Send
+                        UserMessage userMessage = createUserMessage(username, threadContact, newMessage, timestamp);
+
+//                        //Populate in Firestore for current user: username and threadContact only for directory
+//                        populateAllMessages(senderReference, username, threadContact, userMessage);
+//
+//                        //Populate in Firestore for other interlocutor: username and threadContact only for directory
+//                        populateAllMessages(recipientReference, threadContact, username, userMessage);
+
+                        populateAllMessages(senderReference, username, threadContact, threadContact, username, newMessage, timestamp);
+                        populateAllMessages(recipientReference, username, threadContact, username, threadContact, newMessage, timestamp);
                     }
                 }
             }
@@ -207,30 +206,52 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         return timestamp;
     }
 
-    private void populateAllMessages(DocumentReference docRef, String sender, String recipient,
-                                     String newMessage, String timestamp) {
-
+    private UserMessage createUserMessage(String sender, String recipient, String newMessage, String timestamp) {
         UserMessage newUserMessage = new UserMessage();
         newUserMessage.setSender(sender);
         newUserMessage.setRecipient(recipient);
         newUserMessage.setMessage(newMessage);
-        newUserMessage.setTimestamp(timestamp);
+        newUserMessage.setServerTimestamp(FieldValue.serverTimestamp());
+        return newUserMessage;
+    }
 
-        System.out.println(TAG + "Adding a new message sent - From " + sender + " To " + recipient + ": '" + newMessage + "'");
+    private void populateAllMessages(DocumentReference documentReference, String sender, String recipient,
+                                     String firestoreUser, String firestoreThread,
+                                     String message, String timestamp) {
 
-        DocumentReference reference = docRef.collection("threads").document(recipient);
+        UserMessage userMessage = new UserMessage();
+        userMessage.setSender(sender);
+        userMessage.setRecipient(recipient);
+        userMessage.setMessage(message);
+        userMessage.setTimestamp(timestamp);
+        userMessage.setEmotion("");
+        userMessage.setServerTimestamp(FieldValue.serverTimestamp());
 
-//        db.collection("users").document(sender)
-//                .collection("threads").document(recipient)
+        System.out.println(TAG + "Adding a new message sent - From " + firestoreUser + " To " + firestoreThread + ": '" + message + "'");
+
+//        db.collection("users").document(firestoreUser)
+//                .collection("threads").document(firestoreThread)
 //                .collection("allMessages").document(timestamp)
 
-            reference.collection("allMessages").document(timestamp)
-                    .set(newUserMessage)
+
+//        db.collection("users").document(firestoreUser)
+//                .collection("threads").document(firestoreThread)
+//                .collection("allMessages").document(timestamp)
+//                .set(newUserMessage)
+//                .addOnSuccessListener(new OnSuccessListener<Void>() {
+
+
+        db.collection("users").document(firestoreUser)
+                .collection("threads").document(firestoreThread)
+                .collection("allMessages").document(timestamp)
+                .set(userMessage)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
-                        System.out.println(TAG + "Added " + newMessage + " to "
-                                + reference.collection("allMessages").document(timestamp).getId());
+                        System.out.println(TAG + "Added " + message + " to "
+                                + db.collection("users").document(firestoreUser)
+                                .collection("threads").document(firestoreThread)
+                                .collection("allMessages").document(timestamp).getId());
                     }
                 });
 
