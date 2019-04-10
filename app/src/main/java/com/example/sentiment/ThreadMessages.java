@@ -10,6 +10,12 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -26,7 +32,9 @@ import com.google.firebase.firestore.QuerySnapshot;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -48,12 +56,13 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
     int reachedIndex = 0;
 
-
+    private RequestQueue requestQueue;
 
     FirebaseFirestore db;
 
     List<UserMessage> messagesList;
     List<String> messagesListString;
+    List<String> receivedMessagesList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +78,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         threadContact = getIntent().getStringExtra("threadContact");
 
         System.out.println(TAG + "Inherited from previous activity - ");
-        System.out.println(TAG + "usermame - " + username);
+        System.out.println(TAG + "username - " + username);
         System.out.println(TAG + "threadContact - " + threadContact);
 
         currentUser = new User();
@@ -77,6 +86,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
         messagesList = new ArrayList<>();
         messagesListString = new ArrayList<>();
+        receivedMessagesList = new ArrayList<>();
 
         db = FirebaseFirestore.getInstance();
 
@@ -101,9 +111,11 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
                         //remove all past messages
                         messagesListString.clear();
+                        receivedMessagesList.clear();
 
                         //List<String> realtimeMessageListString = new ArrayList<>();
-                        int index = 0;
+                        int indexAll = 0;
+                        int indexReceived = 0;
 
                         for (QueryDocumentSnapshot doc: queryDocumentSnapshots) {
                             if (doc.get("message") != null) {
@@ -112,17 +124,24 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                                 String sender = doc.getString("sender");
                                 if (sender.equals(username)) {
                                     String messageToDisplay = "You: " + message;
-                                    messagesListString.add(index, messageToDisplay);
-                                    index++;
+                                    messagesListString.add(indexAll, messageToDisplay);
+                                    indexAll++;
                                 } else if (sender.equals(threadContact)){
+                                    receivedMessagesList.add(indexReceived, message);
                                     String messageToDisplay = threadContact + ": " + message;
-                                    messagesListString.add(index, messageToDisplay);
-                                    index++;
+                                    messagesListString.add(indexAll, messageToDisplay);
+                                    indexAll++;
+                                    indexReceived++;
                                 }
                                 //messagesListString.add(doc.getString("message"));
                             }
                         }
-                        createRecyclerView();
+                        //sentimentIndexCheck();
+                        if (checkSize()) {
+                            sentimentIndexCheck();
+                        } else {
+                            createRecyclerView();
+                        }
                     }
                 });
     }
@@ -145,6 +164,85 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         //mAdapter.setClickListener(this); //this doesn't work because we haven't added this method; shouldn't need it
 
         recyclerView.setAdapter(mAdapter);
+    }
+
+    private boolean checkSize() {
+        boolean sizeIsValid = false;
+
+        if (receivedMessagesList.size() != 0 && receivedMessagesList.size() % 5 == 0) { //for every 5 message received
+            sizeIsValid = true;
+            System.out.println(TAG + "receivedMessagesList size - " + receivedMessagesList.size()); //this increases for no apparent reason.
+            System.out.println(TAG + "Size of receivedMessagesList is valid: " + receivedMessagesList.size());
+        }
+        return sizeIsValid;
+    }
+
+    private void sentimentIndexCheck() {
+        String sentimentMessage = getSentimentMessage();
+        doSentimentCheck(sentimentMessage);
+    }
+
+//    private void populateReceivedMessagesList() {
+//        int index = 0;
+//        for (int i = messagesListString.size(); i > 0; i--) {
+//            while (index < 5) {
+//                String sender =
+//            }
+//        }
+//    }
+
+    private String getSentimentMessage() {
+        int size = receivedMessagesList.size();
+        String sentimentMessage = "";
+        for (int i = size - 5; i < size; i++) {
+            System.out.println(TAG + "getSentimentMessage - value of i is - " + i);
+            System.out.println(TAG + "getSentimentMessage - message to append - " + receivedMessagesList.get(i));
+            sentimentMessage = sentimentMessage + receivedMessagesList.get(i); //change it to StringBuilder?
+        }
+        System.out.println(TAG + "sentimentMessage - " + sentimentMessage);
+        return sentimentMessage;
+    }
+
+    private void doSentimentCheck(String sentimentMessage) {
+
+        requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
+
+        String url = "https://apiv2.indico.io/emotion";
+
+        StringRequest postRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        addToList(response);
+                        createRecyclerView();
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        System.out.println(TAG + error.getMessage());
+                    }
+                }
+        ) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<String, String>();
+                params.put("api_key", "d802adc8f6210a1af5e8aa5e790dfef8");
+                params.put("data", sentimentMessage);
+
+                return params;
+            }
+
+        };
+
+        requestQueue.add(postRequest);
+    }
+
+    private void addToList(String response) {
+        System.out.println(TAG + "Response is - " + response);
+        int size = messagesListString.size();
+        System.out.println(TAG + "messagesListString size - " + messagesListString.size());
+        messagesListString.add(size, "SENTiment: " + response);
     }
 
     @Override
@@ -186,12 +284,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                         //Because this user has clicked on Send
                         UserMessage userMessage = createUserMessage(username, threadContact, newMessage, timestamp);
 
-//                        //Populate in Firestore for current user: username and threadContact only for directory
-//                        populateAllMessages(senderReference, username, threadContact, userMessage);
-//
-//                        //Populate in Firestore for other interlocutor: username and threadContact only for directory
-//                        populateAllMessages(recipientReference, threadContact, username, userMessage);
-
                         populateAllMessages(senderReference, username, threadContact, threadContact, username, newMessage, timestamp);
                         populateAllMessages(recipientReference, username, threadContact, username, threadContact, newMessage, timestamp);
                     }
@@ -229,18 +321,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
         System.out.println(TAG + "Adding a new message sent - From " + firestoreUser + " To " + firestoreThread + ": '" + message + "'");
 
-//        db.collection("users").document(firestoreUser)
-//                .collection("threads").document(firestoreThread)
-//                .collection("allMessages").document(timestamp)
-
-
-//        db.collection("users").document(firestoreUser)
-//                .collection("threads").document(firestoreThread)
-//                .collection("allMessages").document(timestamp)
-//                .set(newUserMessage)
-//                .addOnSuccessListener(new OnSuccessListener<Void>() {
-
-
         db.collection("users").document(firestoreUser)
                 .collection("threads").document(firestoreThread)
                 .collection("allMessages").document(timestamp)
@@ -254,8 +334,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                                 .collection("allMessages").document(timestamp).getId());
                     }
                 });
-
     }
-
 
 }
