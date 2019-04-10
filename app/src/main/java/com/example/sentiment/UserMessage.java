@@ -1,5 +1,7 @@
 package com.example.sentiment;
 
+import com.google.firebase.firestore.FieldValue;
+
 class UserMessage {
 
     String sender;
@@ -7,6 +9,7 @@ class UserMessage {
     String message;
     String timestamp;
     String emotion;
+    FieldValue serverTimestamp;
 
     public String getSender() {
         return sender;
@@ -46,5 +49,13 @@ class UserMessage {
 
     public void setEmotion(String emotion) {
         this.emotion = emotion;
+    }
+
+    public FieldValue getServerTimestamp() {
+        return serverTimestamp;
+    }
+
+    public void setServerTimestamp(FieldValue serverTimestamp) {
+        this.serverTimestamp = serverTimestamp;
     }
 }
