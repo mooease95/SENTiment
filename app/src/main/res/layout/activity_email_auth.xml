@@ -4,20 +4,21 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/colorBackground"
     android:orientation="vertical"
     tools:context=".EmailAuth">
 
-    <TextView
-        android:id="@+id/textView7"
-        android:layout_width="77dp"
-        android:layout_height="32dp"
-        android:layout_marginStart="168dp"
-        android:layout_marginLeft="168dp"
-        android:layout_marginTop="148dp"
-        android:text="@string/sentiment"
+    <ImageView
+        android:id="@+id/sentimentLogo"
+        android:src="@drawable/sentimentlogofull"
+        android:scaleType="centerCrop"
+        android:layout_width="241dp"
+        android:layout_height="50dp"
+        android:layout_marginStart="85dp"
+        android:layout_marginLeft="85dp"
+        android:layout_marginTop="82dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="SENTiment" />
+        app:layout_constraintTop_toTopOf="parent" />
 
 
     <Button
