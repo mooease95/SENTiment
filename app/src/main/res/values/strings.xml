@@ -97,4 +97,5 @@
     <string name="action_settings">Settings</string>
     <string name="username">Username</string>
     <string name="message">Message</string>
+    <string name="create_new_thread">Create New Thread</string>
 </resources>

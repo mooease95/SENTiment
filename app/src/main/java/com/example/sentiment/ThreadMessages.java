@@ -32,6 +32,8 @@ import com.google.firestore.v1.Document;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -132,6 +134,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                         }
                     }
                     createRecyclerView();
+                    recyclerView.smoothScrollToPosition(mAdapter.getItemCount());
                     listenForRealtime();
                 }
             }
@@ -188,57 +191,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                             sentimentIndexCheck();
                         } else {
                             mAdapter.notifyDataSetChanged();
-                        }
-                    }
-                });
-
-    }
-
-    private void populateRealtimeMessagesList() {
-        db.collection("users").document(username)
-                .collection("threads").document(threadContact)
-                .collection("allMessages")
-                .orderBy("serverTimestamp", Query.Direction.ASCENDING)
-                .addSnapshotListener(new EventListener<QuerySnapshot>() {
-                    @Override
-                    public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
-                        if (e != null) {
-                            System.out.println(TAG + "Listen failed." + e);
-                            return;
-                        }
-
-                        //remove all past messages
-                        messagesListString.clear();
-                        receivedMessagesList.clear();
-
-                        //List<String> realtimeMessageListString = new ArrayList<>();
-                        int indexAll = 0;
-                        int indexReceived = 0;
-
-                        for (QueryDocumentSnapshot doc: queryDocumentSnapshots) {
-                            if (doc.get("message") != null) {
-                                //Here sort between username and threadContact
-                                String message = doc.getString("message");
-                                String sender = doc.getString("sender");
-                                if (sender.equals(username)) {
-                                    String messageToDisplay = "You: " + message;
-                                    messagesListString.add(indexAll, messageToDisplay);
-                                    indexAll++;
-                                } else if (sender.equals(threadContact)){
-                                    receivedMessagesList.add(indexReceived, message);
-                                    String messageToDisplay = threadContact + ": " + message;
-                                    messagesListString.add(indexAll, messageToDisplay);
-                                    indexAll++;
-                                    indexReceived++;
-                                }
-                                //messagesListString.add(doc.getString("message"));
-                            }
-                        }
-                        //sentimentIndexCheck();
-                        if (checkSize()) {
-                            sentimentIndexCheck();
-                        } else {
-                            createRecyclerView();
+                            recyclerView.smoothScrollToPosition(mAdapter.getItemCount());
                         }
                     }
                 });
@@ -283,7 +236,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     private String getSentimentMessage() {
         int size = receivedMessagesList.size();
         String sentimentMessage = "";
-        for (int i = size - 5; i < size; i++) {
+        for (int i = 4; i > 0; i--) { //changing this because received message is now getting added to the beginning
             System.out.println(TAG + "getSentimentMessage - value of i is - " + i);
             System.out.println(TAG + "getSentimentMessage - message to append - " + receivedMessagesList.get(i));
             sentimentMessage = sentimentMessage + receivedMessagesList.get(i); //change it to StringBuilder?
@@ -304,6 +257,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                     public void onResponse(String response) {
                         addToList(response);
                         mAdapter.notifyDataSetChanged();
+                        recyclerView.smoothScrollToPosition(mAdapter.getItemCount());
                     }
                 },
                 new Response.ErrorListener() {
@@ -328,10 +282,108 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     }
 
     private void addToList(String response) {
-        System.out.println(TAG + "Response is - " + response);
+        Map.Entry<String, Double> maxEntry = parseResponse(response);
+
+        String affectiveStateToDisplay = getDisplayState(maxEntry);
+
+        System.out.println(TAG + affectiveStateToDisplay);
         int size = messagesListString.size();
         System.out.println(TAG + "messagesListString size - " + messagesListString.size());
-        messagesListString.add(size, "SENTiment: " + response);
+        messagesListString.add(size, affectiveStateToDisplay);
+    }
+
+    /*
+    response format:
+    {"results": {"anger": <value>, "fear": <value>, "joy": <value>, "sadness": <value>, "surprise": <value>}}
+     */
+    private Map.Entry<String, Double> parseResponse(String response) {
+        String delimiter = "[{]+"; //first parse by [{] to divide into two
+        String[] parse1 = response.split(delimiter); //there should be 3
+        String outputValues = parse1[2]; //0: empty, 1: results, 2: the outputs
+
+        delimiter = "[}]+"; //now get rid of the last two parentheses
+        String[] parse2 = outputValues.split(delimiter);
+        outputValues = parse2[0];
+
+        delimiter = "[,]+"; //now get each state and value
+        String[] parse3 = outputValues.split(delimiter);
+
+        /*
+        0: "anger":_<value>
+        1: _"fear":_<value>
+        2: _"joy":_<value>
+        3: _"sadness":_<value>
+        4: _"surprise":_<value>
+         */
+
+        String[] affectiveStateNames = new String[parse3.length];
+        Double[] affectiveStateValues = new Double[parse3.length];
+
+        delimiter = "[:]"; //separate the values out by colon(:)
+        for (int i = 0; i < parse3.length; i++) {
+            outputValues = parse3[i];
+            String[] parse4 = outputValues.split(delimiter); //should have 2,
+            delimiter = "[ ]"; //now get rid of the spaces
+            String[] parse5 = parse4[0].split(delimiter);
+            String[] parse6 = parse4[1].split(delimiter);
+            affectiveStateNames[i] = parse5[parse5.length-1]; //anger doesn't have any, others will
+            affectiveStateValues[i] = Double.parseDouble(parse6[1]); //first one will be empty
+            delimiter = "[:]"; //set delimiter back for next iteration
+        }
+
+        Map<String, Double> affectiveStatesMap = new HashMap<>();
+
+        delimiter = "[\"]"; //Get rid of the first quotation mark in the affective state name
+        for (int i = 0; i < affectiveStateNames.length; i++) {
+            outputValues = affectiveStateNames[i];
+            String parse5[] = outputValues.split(delimiter); //0: empty, 1: anger
+            String key = parse5[1];
+            Double value = affectiveStateValues[i];
+            affectiveStatesMap.put(key, value);
+        }
+
+        Map.Entry<String, Double> maxEntry = Collections.max(affectiveStatesMap.entrySet(), new Comparator<Map.Entry<String, Double>>() {
+            @Override
+            public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2) {
+                return o1.getValue().compareTo(o2.getValue());
+            }
+        });
+
+        return maxEntry;
+    }
+
+    private String getDisplayState(Map.Entry<String, Double> maxEntry) {
+        String intensity = "";
+        String message = "";
+        String affectiveState = maxEntry.getKey();
+        Double affectiveStateValue = maxEntry.getValue();
+
+        if (affectiveStateValue < 0.5) {
+            intensity = " feeling slightly";
+        }
+
+        switch (affectiveState) {
+            case "anger":
+                message = threadContact + " is" + intensity + " angry";
+                break;
+            case "fear":
+                message = threadContact + " is" + intensity + " fearful";
+                break;
+            case "joy":
+                message = threadContact + " is" + intensity + " joyful";
+                break;
+            case "sadness":
+                message = threadContact + " is" + intensity + " sad";
+                break;
+            case "surprise":
+                message = threadContact + " is" + intensity + " surprised";
+                break;
+            default:
+                break;
+        }
+
+        return message;
+
     }
 
     @Override
