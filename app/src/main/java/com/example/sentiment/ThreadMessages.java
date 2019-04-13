@@ -28,6 +28,7 @@ import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firestore.v1.Document;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -64,6 +65,8 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     List<String> messagesListString;
     List<String> receivedMessagesList;
 
+    Boolean firstListener = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -90,9 +93,104 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
         db = FirebaseFirestore.getInstance();
 
-        //populateMessageList();
+        populateMessageList();
 
-        populateRealtimeMessagesList();
+        //populateRealtimeMessagesList();
+
+        //listenForRealtime();
+
+    }
+
+    private void populateMessageList() {
+        db.collection("users").document(username)
+                .collection("threads").document(threadContact)
+                .collection("allMessages")
+                .orderBy("serverTimestamp", Query.Direction.ASCENDING)
+                .get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                if (task.isSuccessful()) {
+
+                    int indexAll = 0;
+                    int indexReceived = 0;
+
+                    for (QueryDocumentSnapshot doc: task.getResult()) {
+                        if (doc.get("message") != null) {
+                            String message = doc.getString("message");
+                            String sender = doc.getString("sender");
+                            if (sender.equals(username)) {
+                                String messageToDisplay = "You: " + message;
+                                messagesListString.add(indexAll, messageToDisplay);
+                                indexAll++;
+                            } else if (sender.equals(threadContact)) {
+                                receivedMessagesList.add(indexReceived, message);
+                                String messageToDisplay = threadContact + ": " + message;
+                                messagesListString.add(indexAll, messageToDisplay);
+                                indexAll++;
+                                indexReceived++;
+                            }
+                        }
+                    }
+                    createRecyclerView();
+                    listenForRealtime();
+                }
+            }
+        });
+    }
+
+    private void listenForRealtime() {
+        db.collection("users").document(username)
+                .collection("threads").document(threadContact)
+                .collection("allMessages")
+                .orderBy("serverTimestamp", Query.Direction.ASCENDING)
+                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+                    @Override
+                    public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                        if (e != null) {
+                            System.out.println(TAG + "Listen failed." + e);
+                            return;
+                        }
+                        int indexAll = 0;
+                        int indexReceived = 0;
+
+                        if (queryDocumentSnapshots != null) {
+                            QueryDocumentSnapshot document = queryDocumentSnapshots.getDocumentChanges().get(indexAll).getDocument();
+
+                            if (!document.getMetadata().hasPendingWrites()) {
+                                String message = document.getString("message");
+                                String sender = document.getString("sender");
+                                if (sender.equals(username)) {
+                                    String messageToDisplay = "You: " + message;
+                                    if (firstListener == false) {
+                                        messagesListString.add(messageToDisplay);
+                                        indexAll++;
+                                    } else {
+                                        firstListener = false;
+                                    }
+                                    //indexAll++;
+                                } else if (sender.equals(threadContact)) {
+                                    receivedMessagesList.add(indexReceived, message);
+                                    String messageToDisplay = threadContact + ": " + message;
+                                    if (firstListener == false) {
+                                        messagesListString.add(messageToDisplay);
+                                        indexAll++;
+                                        indexReceived++; //Should they be here or outside the if-else statement?
+                                    } else {
+                                        firstListener = false;
+                                    }
+//                                    indexAll++;
+//                                    indexReceived++;
+                                }
+                            }
+                        }
+
+                        if (checkSize()) {
+                            sentimentIndexCheck();
+                        } else {
+                            mAdapter.notifyDataSetChanged();
+                        }
+                    }
+                });
 
     }
 
@@ -182,15 +280,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         doSentimentCheck(sentimentMessage);
     }
 
-//    private void populateReceivedMessagesList() {
-//        int index = 0;
-//        for (int i = messagesListString.size(); i > 0; i--) {
-//            while (index < 5) {
-//                String sender =
-//            }
-//        }
-//    }
-
     private String getSentimentMessage() {
         int size = receivedMessagesList.size();
         String sentimentMessage = "";
@@ -214,7 +303,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                     @Override
                     public void onResponse(String response) {
                         addToList(response);
-                        createRecyclerView();
+                        mAdapter.notifyDataSetChanged();
                     }
                 },
                 new Response.ErrorListener() {
@@ -251,6 +340,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         if (i == R.id.threadMessages_sendButton) {
             if (mNewMessage.getText().toString() != null) {
                 validateAndSend(mNewMessage.getText().toString());
+                mNewMessage.getText().clear();
             }
         }
     }
@@ -277,12 +367,12 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                 if (task.isSuccessful()) {
                     DocumentSnapshot documentSnapshot = task.getResult();
                     if (documentSnapshot.exists()) {
-                        System.out.println(TAG + "Adding document" + recipientReference.getId());
+                        System.out.println(TAG + "Adding document " + recipientReference.getId());
                         String timestamp = getTimestamp();
 
                         //Create the userMessage with sender as current user and thread contact as recipient
                         //Because this user has clicked on Send
-                        UserMessage userMessage = createUserMessage(username, threadContact, newMessage, timestamp);
+                        //UserMessage userMessage = createUserMessage(username, threadContact, newMessage, timestamp);
 
                         populateAllMessages(senderReference, username, threadContact, threadContact, username, newMessage, timestamp);
                         populateAllMessages(recipientReference, username, threadContact, username, threadContact, newMessage, timestamp);
