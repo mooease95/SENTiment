@@ -74,6 +74,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     List<String> receivedMessagesList;
 
     Boolean firstListener = true;
+    Boolean doSentimentCheck = false;
 
     private final String NOTIFICATION_CHANNEL_ID = "sentiment0";
 
@@ -191,12 +192,17 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                                         firstListener = false;
                                     }
                                     sendNotification(message, username);
+                                    if (checkSize()) {
+                                        doSentimentCheck = true;
+                                    } else {
+                                        doSentimentCheck = false;
+                                    }
 //                                    indexAll++;
 //                                    indexReceived++;
                                 }
                             }
                         }
-                        if (checkSize()) {
+                        if (doSentimentCheck) {
                             sentimentIndexCheck();
                         } else {
                             mAdapter.notifyDataSetChanged();
@@ -289,6 +295,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     private void sentimentIndexCheck() {
         String sentimentMessage = getSentimentMessage();
         doSentimentCheck(sentimentMessage);
+        doSentimentCheck = false;
     }
 
     private String getSentimentMessage() {
@@ -340,6 +347,8 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     }
 
     private void addToList(String response) {
+        addToCloud(response);
+
         Map.Entry<String, Double> maxEntry = parseResponse(response);
 
         String affectiveStateToDisplay = getDisplayState(maxEntry);
@@ -348,6 +357,24 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         int size = messagesListString.size();
         System.out.println(TAG + "messagesListString size - " + messagesListString.size());
         messagesListString.add(size, affectiveStateToDisplay);
+    }
+
+    private void addToCloud(String response) {
+        Map<String, Object> affectiveStates = new HashMap<>();
+        affectiveStates.put("threadContact", threadContact);
+        affectiveStates.put("output", response);
+        String timestamp = getTimestamp();
+        affectiveStates.put("timestamp", timestamp);
+
+        db.collection("users").document(username)
+                .collection("affectiveStates").document(timestamp)
+                .set(affectiveStates)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        System.out.println(TAG + "Added affective state to cloud.");
+                    }
+                });
     }
 
     /*
