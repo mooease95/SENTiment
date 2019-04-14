@@ -1,7 +1,9 @@
 package com.example.sentiment;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import timber.log.Timber;
@@ -120,12 +122,22 @@ public class ThreadLists extends AppCompatActivity implements ThreadListsAdapter
         int i = view.getId();
         if (i == R.id.createNewThread) {
             startNextActivity();
+        } else if (i == R.id.feedback) {
+            startFeedbackActivity();
         }
     }
 
     private void startNextActivity() {
         Intent intent = new Intent(ThreadLists.this, NewThread.class);
         intent.putExtra("systemUser", username);
+
+        startActivity(intent);
+    }
+
+    private void startFeedbackActivity() {
+        Intent intent = new Intent(ThreadLists.this, InstantFeedback.class);
+        intent.putExtra("systemUser", username);
+        intent.putExtra("numberOfThreads", numberOfThreads);
 
         startActivity(intent);
     }
