@@ -113,6 +113,7 @@ public class ThreadLists extends AppCompatActivity implements ThreadListsAdapter
         Intent intent = new Intent(ThreadLists.this, ThreadMessages.class);
         intent.putExtra("systemUser", username);
         intent.putExtra("threadContact", threadName);
+        intent.putExtra("numberOfThreads", numberOfThreads);
 
         startActivity(intent);
 

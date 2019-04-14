@@ -7,7 +7,6 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.TaskStackBuilder;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import timber.log.Timber;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -23,7 +22,6 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -36,7 +34,6 @@ import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
-import com.google.firestore.v1.Document;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -64,6 +61,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     private String username;
 
     private String threadContact;
+    private int numberOfThreads;
 
     int reachedIndex = 0;
 
@@ -91,6 +89,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
         username = getIntent().getStringExtra("systemUser");
         threadContact = getIntent().getStringExtra("threadContact");
+        numberOfThreads = getIntent().getIntExtra("numberOfThreads", 0);
 
         System.out.println(TAG + "Inherited from previous activity - ");
         System.out.println(TAG + "username - " + username);
@@ -198,7 +197,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                             }
                         }
 
-                        sendNotification(message);
+                        sendNotification(message, username);
 
                         if (checkSize()) {
                             sentimentIndexCheck();
@@ -210,8 +209,8 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                 });
     }
 
-    private void sendNotification(String message) {
-        PendingIntent pendingResultIntent = getResultIntent();
+    private void sendNotification(String message, String nameOfUser) {
+        PendingIntent pendingResultIntent = getResultIntent(nameOfUser);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.sentimentlogoweb)
                 .setContentTitle(threadContact)
@@ -228,14 +227,14 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         notificationManager.notify(0, builder.build());
     }
 
-    private PendingIntent getResultIntent() {
+    private PendingIntent getResultIntent(String nameOfUser) {
         Intent resultIntent = new Intent(this, ThreadMessages.class);
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
         stackBuilder.addNextIntentWithParentStack(resultIntent);
 
         Intent threadListsIntent = stackBuilder.editIntentAt(1);
-        threadListsIntent.putExtra("systemUser", username);
-        threadListsIntent.putExtra("numberOfThreads", 1);
+        threadListsIntent.putExtra("systemUser", nameOfUser);
+        threadListsIntent.putExtra("numberOfThreads", numberOfThreads);
 
         PendingIntent resultPendingIntent =
                 stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);

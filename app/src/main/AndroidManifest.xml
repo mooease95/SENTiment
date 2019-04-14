@@ -12,8 +12,10 @@
         android:roundIcon="@mipmap/sentimentlogo_round"
         android:supportsRtl="true"
 
-        android:theme="@style/AppTheme.NoActionBar">
+        android:theme="@style/AppTheme">
         <activity android:name="com.example.sentiment.ThreadMessages"
+            android:parentActivityName=".ThreadLists"/>
+        <activity android:name="com.example.sentiment.InstantFeedback"
             android:parentActivityName=".ThreadLists"/>
         <activity android:name="com.example.sentiment.ThreadLists"
             android:parentActivityName=".EmailAuth"/>
