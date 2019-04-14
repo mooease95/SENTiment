@@ -162,7 +162,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                             System.out.println(TAG + "Listen failed." + e);
                             return;
                         }
-                        String message = "";
                         int indexAll = 0;
                         int indexReceived = 0;
 
@@ -170,7 +169,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                             QueryDocumentSnapshot document = queryDocumentSnapshots.getDocumentChanges().get(indexAll).getDocument();
 
                             if (!document.getMetadata().hasPendingWrites()) {
-                                message = document.getString("message");
+                                String message = document.getString("message");
                                 String sender = document.getString("sender");
                                 if (sender.equals(username)) {
                                     String messageToDisplay = "You: " + message;
@@ -191,14 +190,12 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                                     } else {
                                         firstListener = false;
                                     }
+                                    sendNotification(message, username);
 //                                    indexAll++;
 //                                    indexReceived++;
                                 }
                             }
                         }
-
-                        sendNotification(message, username);
-
                         if (checkSize()) {
                             sentimentIndexCheck();
                         } else {
