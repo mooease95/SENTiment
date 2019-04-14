@@ -4,6 +4,7 @@ class User {
 
     String username;
     int numberOfThreads;
+    String representationPreference;
 
     public int getNumberOfThreads() {
         return numberOfThreads;
@@ -19,6 +20,14 @@ class User {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getRepresentationPreference() {
+        return representationPreference;
+    }
+
+    public void setRepresentationPreference(String representationPreference) {
+        this.representationPreference = representationPreference;
     }
 
 
