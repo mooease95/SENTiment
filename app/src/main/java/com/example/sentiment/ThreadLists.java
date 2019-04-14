@@ -49,7 +49,7 @@ public class ThreadLists extends AppCompatActivity implements ThreadListsAdapter
         System.out.println("Started ThreadLists.");
 
         username = getIntent().getStringExtra("systemUser");
-        numberOfThreads = getIntent().getIntExtra("numberOfThreads", 0);
+        numberOfThreads = getIntent().getIntExtra("numberOfThreads", 0); //this should not be coming from previous
 
         System.out.println("Inherited from previous activity: " + username + ", " + numberOfThreads);
 
@@ -113,6 +113,7 @@ public class ThreadLists extends AppCompatActivity implements ThreadListsAdapter
         Intent intent = new Intent(ThreadLists.this, ThreadMessages.class);
         intent.putExtra("systemUser", username);
         intent.putExtra("threadContact", threadName);
+        intent.putExtra("numberOfThreads", numberOfThreads);
 
         startActivity(intent);
 
