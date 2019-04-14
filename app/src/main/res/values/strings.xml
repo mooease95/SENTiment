@@ -98,4 +98,6 @@
     <string name="username">Username</string>
     <string name="message">Message</string>
     <string name="create_new_thread">Create New Thread</string>
+    <string name="channel_name">sentimentchannel</string>
+    <string name="channel_description">Creates a channel for push notifications of SENTiment messages.</string>
 </resources>

@@ -13,8 +13,10 @@
         android:supportsRtl="true"
 
         android:theme="@style/AppTheme.NoActionBar">
-        <activity android:name="com.example.sentiment.ThreadMessages" />
-        <activity android:name="com.example.sentiment.ThreadLists" />
+        <activity android:name="com.example.sentiment.ThreadMessages"
+            android:parentActivityName=".ThreadLists"/>
+        <activity android:name="com.example.sentiment.ThreadLists"
+            android:parentActivityName=".EmailAuth"/>
         <activity android:name="com.example.sentiment.NewThread" />
         <activity android:name="com.example.sentiment.EmailAuth">
             <intent-filter>

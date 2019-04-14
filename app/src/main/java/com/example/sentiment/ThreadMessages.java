@@ -2,10 +2,18 @@ package com.example.sentiment;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.TaskStackBuilder;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import timber.log.Timber;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
@@ -68,6 +76,8 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     List<String> receivedMessagesList;
 
     Boolean firstListener = true;
+
+    private final String NOTIFICATION_CHANNEL_ID = "sentiment0";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -153,6 +163,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                             System.out.println(TAG + "Listen failed." + e);
                             return;
                         }
+                        String message = "";
                         int indexAll = 0;
                         int indexReceived = 0;
 
@@ -160,7 +171,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                             QueryDocumentSnapshot document = queryDocumentSnapshots.getDocumentChanges().get(indexAll).getDocument();
 
                             if (!document.getMetadata().hasPendingWrites()) {
-                                String message = document.getString("message");
+                                message = document.getString("message");
                                 String sender = document.getString("sender");
                                 if (sender.equals(username)) {
                                     String messageToDisplay = "You: " + message;
@@ -187,6 +198,8 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                             }
                         }
 
+                        sendNotification(message);
+
                         if (checkSize()) {
                             sentimentIndexCheck();
                         } else {
@@ -195,6 +208,55 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                         }
                     }
                 });
+    }
+
+    private void sendNotification(String message) {
+        PendingIntent pendingResultIntent = getResultIntent();
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.sentimentlogoweb)
+                .setContentTitle(threadContact)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+        createNotificationChannel();
+
+        builder.setContentIntent(pendingResultIntent);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        notificationManager.notify(0, builder.build());
+    }
+
+    private PendingIntent getResultIntent() {
+        Intent resultIntent = new Intent(this, ThreadMessages.class);
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+        stackBuilder.addNextIntentWithParentStack(resultIntent);
+
+        Intent threadListsIntent = stackBuilder.editIntentAt(1);
+        threadListsIntent.putExtra("systemUser", username);
+        threadListsIntent.putExtra("numberOfThreads", 1);
+
+        PendingIntent resultPendingIntent =
+                stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+        stackBuilder.editIntentAt(1);
+        return resultPendingIntent;
+    }
+
+    private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = getString(R.string.channel_name);
+            String description = getString(R.string.channel_description);
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 
     private void createRecyclerView() {
