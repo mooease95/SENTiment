@@ -12,14 +12,16 @@
         android:roundIcon="@mipmap/sentimentlogo_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".InstantFeedback"></activity>
-        <activity android:name=".ThreadMessages" />
-        <activity android:name=".ThreadLists" />
-        <activity android:name=".NewThread" />
-        <activity android:name=".EmailAuth">
+        <activity android:name="com.example.sentiment.ThreadMessages"
+            android:parentActivityName=".ThreadLists"/>
+        <activity android:name="com.example.sentiment.InstantFeedback"
+            android:parentActivityName=".ThreadLists"/>
+        <activity android:name="com.example.sentiment.ThreadLists"
+            android:parentActivityName=".EmailAuth"/>
+        <activity android:name="com.example.sentiment.NewThread" />
+        <activity android:name="com.example.sentiment.EmailAuth">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <!-- <action android:name="android.intent.action.VIEW" /> -->
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
