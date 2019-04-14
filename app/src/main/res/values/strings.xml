@@ -98,4 +98,9 @@
     <string name="username">Username</string>
     <string name="message">Message</string>
     <string name="create_new_thread">Create New Thread</string>
+    <string name="feedback_question_1">How did knowing the affective state make you feel?</string>
+    <string name="feedback_question_2">How did you find the reported SENTiment Index today?</string>
+    <string name="feedback_question_3">Any other comments?</string>
+    <string name="submit">Submit</string>
+    <string name="send_feedback">Send Feedback</string>
 </resources>
