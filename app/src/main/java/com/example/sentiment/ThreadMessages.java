@@ -7,6 +7,7 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.TaskStackBuilder;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import timber.log.Timber;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -63,8 +64,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     private String threadContact;
     private int numberOfThreads;
 
-    int reachedIndex = 0;
-
     private RequestQueue requestQueue;
 
     FirebaseFirestore db;
@@ -83,18 +82,12 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_thread_messages);
 
-        System.out.println(TAG + "Started");
-
         mNewMessage = findViewById(R.id.threadMessages_messageField);
         findViewById(R.id.threadMessages_sendButton).setOnClickListener(this);
 
         username = getIntent().getStringExtra("systemUser");
         threadContact = getIntent().getStringExtra("threadContact");
         numberOfThreads = getIntent().getIntExtra("numberOfThreads", 0);
-
-        System.out.println(TAG + "Inherited from previous activity - ");
-        System.out.println(TAG + "username - " + username);
-        System.out.println(TAG + "threadContact - " + threadContact);
 
         currentUser = new User();
         currentUser.setUsername(username);
@@ -106,11 +99,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         db = FirebaseFirestore.getInstance();
 
         populateMessageList();
-
-        //populateRealtimeMessagesList();
-
-        //listenForRealtime();
-
     }
 
     private void populateMessageList() {
@@ -160,14 +148,11 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                     @Override
                     public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
                         if (e != null) {
-                            System.out.println(TAG + "Listen failed." + e);
                             return;
                         }
-                        int indexAll = 0;
-                        int indexReceived = 0;
 
                         if (queryDocumentSnapshots != null) {
-                            QueryDocumentSnapshot document = queryDocumentSnapshots.getDocumentChanges().get(indexAll).getDocument();
+                            QueryDocumentSnapshot document = queryDocumentSnapshots.getDocumentChanges().get(0).getDocument();
 
                             if (!document.getMetadata().hasPendingWrites()) {
                                 String message = document.getString("message");
@@ -176,29 +161,20 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                                     String messageToDisplay = "You: " + message;
                                     if (firstListener == false) {
                                         messagesListString.add(messageToDisplay);
-                                        indexAll++;
                                     } else {
                                         firstListener = false;
                                     }
                                     //indexAll++;
                                 } else if (sender.equals(threadContact)) {
-                                    receivedMessagesList.add(indexReceived, message);
+                                    receivedMessagesList.add(0, message);
                                     String messageToDisplay = threadContact + ": " + message;
                                     if (firstListener == false) {
                                         messagesListString.add(messageToDisplay);
-                                        indexAll++;
-                                        indexReceived++; //Should they be here or outside the if-else statement?
                                     } else {
                                         firstListener = false;
                                     }
                                     sendNotification(message, username);
-                                    if (checkSize()) {
-                                        doSentimentCheck = true;
-                                    } else {
-                                        doSentimentCheck = false;
-                                    }
-//                                    indexAll++;
-//                                    indexReceived++;
+                                    doSentimentCheck = checkSize();
                                 }
                             }
                         }
@@ -262,18 +238,9 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     }
 
     private void createRecyclerView() {
-        System.out.println(TAG + "Started createRecyclerView, times here: " + reachedIndex);
-        reachedIndex++;
-
         recyclerView = (RecyclerView) findViewById(R.id.threadMessages_recyclerView);
         layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
-
-        if (messagesListString.isEmpty()) {
-            System.out.println(TAG + "Size of list is: " + messagesListString.size());
-        }
-
-        System.out.println(TAG + "first element in list - " + messagesListString.get(0));
 
         mAdapter = new ThreadMessagesAdapter(messagesListString);
         //mAdapter.setClickListener(this); //this doesn't work because we haven't added this method; shouldn't need it
@@ -286,8 +253,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
         if (receivedMessagesList.size() != 0 && receivedMessagesList.size() % 5 == 0) { //for every 5 message received
             sizeIsValid = true;
-            System.out.println(TAG + "receivedMessagesList size - " + receivedMessagesList.size()); //this increases for no apparent reason.
-            System.out.println(TAG + "Size of receivedMessagesList is valid: " + receivedMessagesList.size());
         }
         return sizeIsValid;
     }
@@ -299,14 +264,10 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     }
 
     private String getSentimentMessage() {
-        int size = receivedMessagesList.size();
         String sentimentMessage = "";
         for (int i = 4; i > 0; i--) { //changing this because received message is now getting added to the beginning
-            System.out.println(TAG + "getSentimentMessage - value of i is - " + i);
-            System.out.println(TAG + "getSentimentMessage - message to append - " + receivedMessagesList.get(i));
             sentimentMessage = sentimentMessage + receivedMessagesList.get(i); //change it to StringBuilder?
         }
-        System.out.println(TAG + "sentimentMessage - " + sentimentMessage);
         return sentimentMessage;
     }
 
@@ -328,7 +289,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        System.out.println(TAG + error.getMessage());
                     }
                 }
         ) {
@@ -353,9 +313,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
         String affectiveStateToDisplay = getDisplayState(maxEntry);
 
-        System.out.println(TAG + affectiveStateToDisplay);
         int size = messagesListString.size();
-        System.out.println(TAG + "messagesListString size - " + messagesListString.size());
         messagesListString.add(size, affectiveStateToDisplay);
     }
 
@@ -372,7 +330,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
-                        System.out.println(TAG + "Added affective state to cloud.");
                     }
                 });
     }
@@ -483,20 +440,8 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
     }
 
     private void validateAndSend(String newMessage) {
-        //first display it to screen? -> Remove after setting up realtime listeners
-//        int indexOfLastMessage = messagesListString.size();
-//        messagesListString.add(indexOfLastMessage, newMessage);
-
-        System.out.println(TAG + "Size of list now is - " + messagesListString.size());
-        for (int elements = 0; elements < messagesListString.size(); elements++) {
-            System.out.println(TAG + "messageListString(" + elements + "): " + messagesListString.get(elements));
-        }
-
         DocumentReference senderReference = db.collection("users").document(username);
         DocumentReference recipientReference = db.collection("users").document(threadContact);
-
-        System.out.println(TAG + "senderReference - " + senderReference.getId());
-        System.out.println(TAG + "recipientReference - " + recipientReference.getId());
 
         senderReference.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
             @Override
@@ -504,15 +449,14 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                 if (task.isSuccessful()) {
                     DocumentSnapshot documentSnapshot = task.getResult();
                     if (documentSnapshot.exists()) {
-                        System.out.println(TAG + "Adding document " + recipientReference.getId());
                         String timestamp = getTimestamp();
 
                         //Create the userMessage with sender as current user and thread contact as recipient
                         //Because this user has clicked on Send
                         //UserMessage userMessage = createUserMessage(username, threadContact, newMessage, timestamp);
 
-                        populateAllMessages(senderReference, username, threadContact, threadContact, username, newMessage, timestamp);
-                        populateAllMessages(recipientReference, username, threadContact, username, threadContact, newMessage, timestamp);
+                        populateAllMessages(username, threadContact, threadContact, username, newMessage, timestamp);
+                        populateAllMessages(username, threadContact, username, threadContact, newMessage, timestamp);
                     }
                 }
             }
@@ -525,16 +469,7 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         return timestamp;
     }
 
-    private UserMessage createUserMessage(String sender, String recipient, String newMessage, String timestamp) {
-        UserMessage newUserMessage = new UserMessage();
-        newUserMessage.setSender(sender);
-        newUserMessage.setRecipient(recipient);
-        newUserMessage.setMessage(newMessage);
-        newUserMessage.setServerTimestamp(FieldValue.serverTimestamp());
-        return newUserMessage;
-    }
-
-    private void populateAllMessages(DocumentReference documentReference, String sender, String recipient,
+    private void populateAllMessages(String sender, String recipient,
                                      String firestoreUser, String firestoreThread,
                                      String message, String timestamp) {
 
@@ -546,8 +481,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         userMessage.setEmotion("");
         userMessage.setServerTimestamp(FieldValue.serverTimestamp());
 
-        System.out.println(TAG + "Adding a new message sent - From " + firestoreUser + " To " + firestoreThread + ": '" + message + "'");
-
         db.collection("users").document(firestoreUser)
                 .collection("threads").document(firestoreThread)
                 .collection("allMessages").document(timestamp)
@@ -555,10 +488,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
-                        System.out.println(TAG + "Added " + message + " to "
-                                + db.collection("users").document(firestoreUser)
-                                .collection("threads").document(firestoreThread)
-                                .collection("allMessages").document(timestamp).getId());
                     }
                 });
     }

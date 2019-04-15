@@ -38,6 +38,8 @@ public class EmailAuth extends AppCompatActivity implements View.OnClickListener
 
         mUsernameField = findViewById(R.id.usernameField);
 
+        mUsernameField.setHint("Username");
+
         findViewById(R.id.signin).setOnClickListener(this);
         findViewById(R.id.register).setOnClickListener(this);
 
@@ -71,10 +73,8 @@ public class EmailAuth extends AppCompatActivity implements View.OnClickListener
     public void onClick(View view) {
         int i = view.getId();
         if (i == R.id.register) {
-            System.out.println("Just clicked register.");
             createAccount(mUsernameField.getText().toString());
         } else if(i == R.id.signin) {
-            System.out.println("Just clicked signIn.");
             signIn(mUsernameField.getText().toString());
         }
     }
@@ -105,30 +105,22 @@ public class EmailAuth extends AppCompatActivity implements View.OnClickListener
     }
 
     private void obtainNumberOfThreads(String username) {
-        System.out.println(TAG + ": at obtainNumberOfThreads for " + username);
         DocumentReference documentReference = db.collection("users").document(username);
-        System.out.println(TAG + ": documentReference is " + documentReference.getId());
 
         documentReference.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
             @Override
             public void onSuccess(DocumentSnapshot documentSnapshot) {
-                System.out.println(TAG + ": getting document snapshot");
                 if (documentSnapshot.exists()) {
                     int numberOfThreads = Integer.parseInt(documentSnapshot.get("numberOfThreads").toString());
-                    System.out.println(TAG + ": numberOfThreads is " + numberOfThreads);
                     currentUser.setNumberOfThreads(numberOfThreads);
                     startNextActivity();
                 }
             }
         });
-        System.out.println(TAG + ": Finishing obtainNumberOfThreads.");
-
     }
 
 
     private void createAccount(String username) {
-        Timber.d("%s: createAccount: %s", TAG, username);
-
         instantiateUser(username, 0);
 
         addToCloud(username);
@@ -138,30 +130,20 @@ public class EmailAuth extends AppCompatActivity implements View.OnClickListener
     }
 
     private void addToCloud(String username) {
-
-        System.out.println("Adding to Cloud: " + username);
-
         db.collection("users").document(username).set(currentUser)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
-                        Timber.d("%s: Document added successfully.", TAG);
-                        System.out.println("Document added successfully for: " + username);
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Timber.d("%s: Error writing document.", TAG);
-                        System.out.println("Error writing document for: " + username);
                     }
                 });
-        System.out.println("Finished adding to Cloud: " + username);
     }
 
     private void signIn(String username) {
-        Log.d(TAG, "signIn");
-        Timber.d("%s: signIn: %s", TAG, username);
         if(!validateForm()) {
             return;
         }
@@ -180,8 +162,6 @@ public class EmailAuth extends AppCompatActivity implements View.OnClickListener
         Intent intent = new Intent(EmailAuth.this, ThreadLists.class);
         intent.putExtra("systemUser", currentUser.getUsername());
         intent.putExtra("numberOfThreads", currentUser.getNumberOfThreads());
-
-        //System.out.println("EmailAuth numberOfThreads: " + currentUser.getNumberOfThreads());
 
         startActivity(intent);
     }

@@ -23,8 +23,6 @@ public class ThreadLists extends AppCompatActivity implements ThreadListsAdapter
 
     private static final String TAG = "ThreadLists";
 
-    ThreadListsAdapter threadListsAdapter;
-
     private RecyclerView recyclerView;
     private ThreadListsAdapter mAdapter;
     private RecyclerView.LayoutManager layoutManager;
@@ -33,11 +31,9 @@ public class ThreadLists extends AppCompatActivity implements ThreadListsAdapter
     private String username;
     private int numberOfThreads;
 
-    private String sender;
 
     FirebaseFirestore db;
 
-    ListView listView;
     String[] threadContacts;
 
 
@@ -46,18 +42,12 @@ public class ThreadLists extends AppCompatActivity implements ThreadListsAdapter
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_thread_lists);
 
-        System.out.println("Started ThreadLists.");
-
         username = getIntent().getStringExtra("systemUser");
         numberOfThreads = getIntent().getIntExtra("numberOfThreads", 0); //this should not be coming from previous
-
-        System.out.println("Inherited from previous activity: " + username + ", " + numberOfThreads);
 
         currentUser = new User();
         currentUser.setUsername(username);
         currentUser.setNumberOfThreads(numberOfThreads);
-
-        System.out.println(TAG + ": Inherited currentUser - " + currentUser.getUsername());
 
         threadContacts = new String[numberOfThreads];
 
@@ -78,13 +68,10 @@ public class ThreadLists extends AppCompatActivity implements ThreadListsAdapter
                     @Override
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         if (task.isSuccessful()) {
-                            Timber.d("%s: Getting List of Threads.", TAG);
                             int index = 0;
                             for (QueryDocumentSnapshot document : task.getResult()) {
                                 String contact = document.getData().get("threadContact").toString();
                                 threadContacts[index] = contact;
-                                System.out.println("ThreadLists fetched: " + threadContacts[index]);
-                                System.out.println("Should have got: " + contact);
                                 index++;
                             }
                             createRecyclerView();
