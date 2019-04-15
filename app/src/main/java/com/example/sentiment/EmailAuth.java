@@ -101,7 +101,7 @@ public class EmailAuth extends AppCompatActivity implements View.OnClickListener
         } else {
             currentUser.setNumberOfThreads(numberOfThreads); //should be 0 here all the time
         }
-        currentUser.setRepresentationPreference("Text");
+        currentUser.setRepresentationPreference("Colour");
     }
 
     private void obtainNumberOfThreads(String username) {
