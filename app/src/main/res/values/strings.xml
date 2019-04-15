@@ -97,12 +97,12 @@
     <string name="action_settings">Settings</string>
     <string name="username">Username</string>
     <string name="message">Message</string>
-    <string name="create_new_thread">Create New Thread</string>
+    <string name="create_new_thread">New</string>
     <string name="channel_name">sentimentchannel</string>
     <string name="channel_description">Creates a channel for push notifications of SENTiment messages.</string>
     <string name="feedback_question_1">How did knowing the affective state make you feel?</string>
     <string name="feedback_question_2">How did you find the reported SENTiment Index today?</string>
     <string name="feedback_question_3">Any other comments?</string>
     <string name="submit">Submit</string>
-    <string name="send_feedback">Send Feedback</string>
+    <string name="send_feedback">Feedback</string>
 </resources>
