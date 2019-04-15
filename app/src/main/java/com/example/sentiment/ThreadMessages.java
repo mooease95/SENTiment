@@ -311,10 +311,9 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
         Map.Entry<String, Double> maxEntry = parseResponse(response);
 
-        String affectiveStateToDisplay = getDisplayState(maxEntry);
-
-        int size = messagesListString.size();
-        messagesListString.add(size, affectiveStateToDisplay);
+        String affectiveState = maxEntry.getKey();
+        mAdapter.setChangeColour(true);
+        mAdapter.setAffectiveState(affectiveState);
     }
 
     private void addToCloud(String response) {
@@ -392,40 +391,6 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         });
 
         return maxEntry;
-    }
-
-    private String getDisplayState(Map.Entry<String, Double> maxEntry) {
-        String intensity = "";
-        String message = "";
-        String affectiveState = maxEntry.getKey();
-        Double affectiveStateValue = maxEntry.getValue();
-
-        if (affectiveStateValue < 0.5) {
-            intensity = " feeling slightly";
-        }
-
-        switch (affectiveState) {
-            case "anger":
-                message = threadContact + " is" + intensity + " angry";
-                break;
-            case "fear":
-                message = threadContact + " is" + intensity + " fearful";
-                break;
-            case "joy":
-                message = threadContact + " is" + intensity + " joyful";
-                break;
-            case "sadness":
-                message = threadContact + " is" + intensity + " sad";
-                break;
-            case "surprise":
-                message = threadContact + " is" + intensity + " surprised";
-                break;
-            default:
-                break;
-        }
-
-        return message;
-
     }
 
     @Override

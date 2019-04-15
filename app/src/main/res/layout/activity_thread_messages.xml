@@ -10,6 +10,7 @@
         android:id="@+id/threadMessages_recyclerView"
         android:scrollbars="vertical"
         android:layout_width="match_parent"
+        android:background="@color/colorBackground"
         android:layout_height="match_parent"
         android:layout_marginBottom="110dp">
     </androidx.recyclerview.widget.RecyclerView>

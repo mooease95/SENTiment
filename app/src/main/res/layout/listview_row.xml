@@ -13,6 +13,7 @@
             android:id="@+id/textviewThreadName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textColor="@color/colorMessageText"
             android:text="TextView"
             android:textIsSelectable="false" />
 
