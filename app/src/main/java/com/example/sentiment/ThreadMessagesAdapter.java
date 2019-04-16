@@ -1,9 +1,11 @@
 package com.example.sentiment;
 
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.List;
@@ -14,8 +16,6 @@ import androidx.recyclerview.widget.RecyclerView;
 public class ThreadMessagesAdapter extends RecyclerView.Adapter<ThreadMessagesAdapter.ThreadMessagesViewHolder> {
 
     private List<String> threadMessagesList;
-    private Boolean changeColour = false;
-    private String affectiveState = "";
 
     private LayoutInflater layoutInflater;
     //private ItemClickListener itemClickListener; //we should not need this here
@@ -24,14 +24,7 @@ public class ThreadMessagesAdapter extends RecyclerView.Adapter<ThreadMessagesAd
     public ThreadMessagesAdapter(List<String> threadMessagesList) {
         //this.threadMessagesList.addAll(threadMessagesList);
         this.threadMessagesList = threadMessagesList;
-    }
 
-    public void setChangeColour(Boolean changeColour) {
-        this.changeColour = changeColour;
-    }
-
-    public void setAffectiveState(String affectiveState) {
-        this.affectiveState = affectiveState;
     }
 
     //inflates the row layout from xml when needed
@@ -51,30 +44,6 @@ public class ThreadMessagesAdapter extends RecyclerView.Adapter<ThreadMessagesAd
         //get element from the dataset
         //replace the contents of the view with that element
         String threadMessage = threadMessagesList.get(position);
-
-        if (changeColour) {
-            switch (affectiveState) {
-                case "joy":
-                    viewHolder.threadMessage.setTextColor(Color.YELLOW);
-                    break;
-                case "fear":
-                    viewHolder.threadMessage.setTextColor(Color.BLACK);
-                    break;
-                case "sadness":
-                    viewHolder.threadMessage.setTextColor(Color.BLUE);
-                    break;
-                case "anger":
-                    viewHolder.threadMessage.setTextColor(Color.RED);
-                    break;
-                case "surprise":
-                    viewHolder.threadMessage.setTextColor(Color.rgb(255,165,0));
-                    break;
-                default:
-                    viewHolder.threadMessage.setTextColor(Color.WHITE);
-                    break;
-            }
-        }
-
         viewHolder.threadMessage.setText(threadMessage);
     }
 

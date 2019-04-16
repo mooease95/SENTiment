@@ -7,7 +7,6 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.TaskStackBuilder;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import timber.log.Timber;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -17,6 +16,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -58,6 +58,10 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
     private EditText mNewMessage;
 
+    private ImageView valence;
+    private ImageView arousal;
+    private ImageView dominance;
+
     private User currentUser;
     private String username;
 
@@ -84,6 +88,10 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
 
         mNewMessage = findViewById(R.id.threadMessages_messageField);
         findViewById(R.id.threadMessages_sendButton).setOnClickListener(this);
+
+        valence = findViewById(R.id.valence);
+        arousal = findViewById(R.id.arousal);
+        dominance = findViewById(R.id.dominance);
 
         username = getIntent().getStringExtra("systemUser");
         threadContact = getIntent().getStringExtra("threadContact");
@@ -312,8 +320,42 @@ public class ThreadMessages extends AppCompatActivity implements View.OnClickLis
         Map.Entry<String, Double> maxEntry = parseResponse(response);
 
         String affectiveState = maxEntry.getKey();
-        mAdapter.setChangeColour(true);
-        mAdapter.setAffectiveState(affectiveState);
+        changeImageViews(affectiveState);
+    }
+
+    private void changeImageViews(String affectiveState) {
+        switch (affectiveState) {
+            case "joy":
+                valence.setImageResource(R.drawable.joyvalence);
+                arousal.setImageResource(R.drawable.joyarousal);
+                dominance.setImageResource(R.drawable.joydominance);
+                break;
+            case "fear":
+                valence.setImageResource(R.drawable.fearvalence);
+                arousal.setImageResource(R.drawable.feararousal);
+                dominance.setImageResource(R.drawable.feardominance);
+                break;
+            case "sadness":
+                valence.setImageResource(R.drawable.sadnessvalence);
+                arousal.setImageResource(R.drawable.sadnessarousal);
+                dominance.setImageResource(R.drawable.sadnessdominance);
+                break;
+            case "anger":
+                valence.setImageResource(R.drawable.angervalence);
+                arousal.setImageResource(R.drawable.angerarousal);
+                dominance.setImageResource(R.drawable.angerdominance);
+                break;
+            case "surprise":
+                valence.setImageResource(R.drawable.surprisevalence);
+                arousal.setImageResource(R.drawable.surprisearousal);
+                dominance.setImageResource(R.drawable.surprisedominance);
+                break;
+            default:
+                valence.setImageResource(R.drawable.surprisevalence);
+                arousal.setImageResource(R.drawable.joyarousal);
+                dominance.setImageResource(R.drawable.joydominance);
+                break;
+        }
     }
 
     private void addToCloud(String response) {
